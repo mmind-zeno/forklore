@@ -1,0 +1,5 @@
+# Deploy temp
+webapp-deploy/
+
+# Local env
+.env
