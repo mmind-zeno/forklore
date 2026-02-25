@@ -31,6 +31,16 @@ npx prisma db push
 npm run dev
 ```
 
+## Git / GitHub
+
+Das Repo ist initialisiert. Repo auf GitHub anlegen (https://github.com/new, Name: `forklore`), dann:
+
+```powershell
+git push -u origin main
+```
+
+Details: [SETUP-GITHUB.md](SETUP-GITHUB.md)
+
 ## Deploy
 
 ```bash
