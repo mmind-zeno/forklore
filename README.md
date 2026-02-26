@@ -1,19 +1,19 @@
-# Forklore – Recipe App v0.1.0
+# Forklore – Recipe App v0.3.0
 
-Rezepte per Foto und Sprache erfassen. Mobile-first Web-App.
+Rezepte per Notiz, Foto und Sprache erfassen. Mobile-first Web-App.
 
 ## Live
 
 - **URL:** http://195.201.145.97:3001
-- **Domain (nach DNS-Setup):** http://recipes.mmind.space
+- **Domain:** https://forklore.mmind.space (auch recipes.mmind.space)
 
 ## Features
 
-- Foto vom Essen aufnehmen
-- Rezept per Sprache einsprechen
+- **Notiz-Modus:** Rezept als Text schreiben (optional mit Foto)
+- **Mikrofon-Modus:** Foto + Sprache einsprechen
 - KI extrahiert Zutaten und Schritte (Whisper + GPT-4o)
 - Rezepte in SQLite speichern
-- Übersicht und Detail-Ansicht
+- **Admin:** User-Verwaltung unter `/admin`
 
 ## Tech-Stack
 
@@ -25,7 +25,7 @@ Rezepte per Foto und Sprache erfassen. Mobile-first Web-App.
 
 ```bash
 cd webapp
-cp .env.example .env   # OPENAI_API_KEY eintragen
+cp .env.example .env   # OPENAI_API_KEY, ADMIN_PASSWORD eintragen
 npm install
 npx prisma db push
 npm run dev
@@ -47,20 +47,21 @@ Details: [SETUP-GITHUB.md](SETUP-GITHUB.md)
 .\deploy-local.ps1 hetzner
 ```
 
-## OPENAI_API_KEY (Server)
+## Umgebungsvariablen (Server)
 
 Nach dem ersten Deploy auf dem Server:
 
 ```bash
 ssh hetzner "cd /opt/recipes && cp .env.example .env"
-# .env bearbeiten: OPENAI_API_KEY=sk-...
+# .env bearbeiten: OPENAI_API_KEY=sk-..., ADMIN_PASSWORD=dein-sicheres-passwort
 ssh hetzner "cd /opt/recipes && docker compose restart"
 ```
 
-## DNS-Setup für recipes.mmind.space
+## DNS-Setup
 
 ```
-recipes.mmind.space  →  A  →  195.201.145.97
+forklore.mmind.space  →  A  →  195.201.145.97
+recipes.mmind.space   →  A  →  195.201.145.97
 ```
 
-Dann SSL: `ssh hetzner "certbot --nginx -d recipes.mmind.space"`
+SSL (nach DNS-Propagation): `ssh hetzner "sudo certbot --nginx -d forklore.mmind.space"`

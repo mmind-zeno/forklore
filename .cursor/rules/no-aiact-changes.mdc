@@ -1,0 +1,11 @@
+---
+description: Keine Änderungen an aiact ohne Rückfrage
+alwaysApply: true
+---
+
+# aiact-Projekt: Änderungen nur nach Rückfrage
+
+- **Keine Änderungen** an Dateien im Projekt **aiact** ohne explizite Bestätigung des Nutzers.
+- Bei jeder Anfrage, die aiact betreffen könnte: **immer zuerst nachfragen**, ob Änderungen erlaubt sind.
+- Gilt für alle Dateien unter `aiact/**` bzw. im aiact-Workspace-Root.
+- Fokus liegt auf **Forklore**; aiact bleibt unverändert, es sei denn, der Nutzer bestätigt es ausdrücklich.

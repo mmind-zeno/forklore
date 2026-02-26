@@ -22,12 +22,18 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma ./prisma_schema
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/sharp ./node_modules/sharp
+COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+COPY --from=builder /app/node_modules/@img ./node_modules/@img
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/migrate-setting.js /app/
+COPY --from=builder /app/migrate-recipe-columns.js /app/
+COPY docker-entrypoint.sh /app/
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 RUN mkdir -p /app/prisma /app/uploads && chown -R nextjs:nodejs /app/prisma /app/uploads
-USER nextjs
 EXPOSE 3000
-ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["npx prisma db push --accept-data-loss 2>/dev/null || true && exec node server.js"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
