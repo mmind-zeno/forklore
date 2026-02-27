@@ -1,7 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { ArrowRight, Pencil } from "lucide-react";
+
+function getCategoryEmoji(category: string | null): string {
+  const map: Record<string, string> = {
+    backen: "🥐",
+    kochen: "🍳",
+    vegan: "🌿",
+  };
+  return (category && map[category]) ?? "🍽️";
+}
+
+function getCategoryLabel(category: string | null): string {
+  if (!category) return "";
+  if (category === "backen") return "Backen";
+  if (category === "kochen") return "Kochen";
+  return category;
+}
 
 type Recipe = {
   id: string;
@@ -14,63 +30,97 @@ type Recipe = {
 
 export function RecipeCard({ recipe, index }: { recipe: Recipe; index: number }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06, type: "spring", stiffness: 100 }}
-      whileHover={{ y: -4 }}
+    <article
+      className={`group relative bg-warmwhite rounded-2xl overflow-hidden border border-espresso/5 shadow-sm
+        transition-all duration-300 hover:-translate-y-2 hover:shadow-hover hover:border-terra/20 reveal`}
+      style={{ transitionDelay: `${index * 50}ms` }}
     >
+      {/* Quick edit button */}
       <Link
-        href={`/recipe/${recipe.id}`}
-        className="block rounded-2xl overflow-hidden bg-white border border-stone-200/80 shadow-lg hover:shadow-xl hover:shadow-coral-500/10 hover:border-coral-400/40 transition-all duration-300 group"
+        href={`/edit/${recipe.id}`}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Rezept bearbeiten"
+        className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-warmwhite/90 backdrop-blur-sm border border-espresso/10 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-terra hover:text-white hover:border-terra transition-all duration-200 shadow-sm"
       >
+        <Pencil size={13} />
+      </Link>
+      <Link href={`/recipe/${recipe.id}`} className="block cursor-pointer">
+      {/* Image area */}
+      <div className="relative overflow-hidden h-52">
         {recipe.imagePath ? (
-          <div className="relative overflow-hidden">
+          <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/uploads/${recipe.imagePath}`}
               alt={recipe.title}
-              className="w-full h-44 object-cover group-hover:scale-110 transition-transform duration-500"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
+            <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+              <span className="text-white font-body font-bold text-sm">Rezept ansehen →</span>
+            </div>
+          </>
         ) : (
-          <div className="w-full h-44 bg-gradient-to-br from-coral-400/25 via-amber-100 to-teal-200/30 flex items-center justify-center text-stone-500 text-5xl group-hover:scale-105 transition-transform">
-            🍳
+          <div className="w-full h-full bg-gradient-to-br from-cream-dark via-cream to-warmwhite flex flex-col items-center justify-center gap-3">
+            <span className="text-5xl opacity-60 select-none">{getCategoryEmoji(recipe.category)}</span>
+            <span className="font-display italic text-espresso-light text-sm text-center px-4 max-w-[160px] leading-snug opacity-70 line-clamp-2">
+              {recipe.title}
+            </span>
+            <span className="text-[10px] uppercase tracking-widest text-espresso-light/50 font-bold">
+              Kein Bild hochgeladen
+            </span>
           </div>
         )}
-        <div className="p-4">
-          <div className="flex flex-wrap gap-1.5 mb-1.5">
-            {recipe.category && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">
-                {recipe.category === "backen" ? "🥐 Backen" : "🍲 Kochen"}
+        {/* Category + Tags badges */}
+        <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5">
+          {recipe.category && (
+            <span className="bg-warmwhite/90 backdrop-blur-sm text-espresso font-bold text-[11px] uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              {getCategoryEmoji(recipe.category)} {getCategoryLabel(recipe.category)}
+            </span>
+          )}
+          {recipe.tags && (() => {
+            let tagList: string[] = [];
+            try {
+              const t = JSON.parse(recipe.tags) as string[];
+              if (Array.isArray(t)) tagList = t;
+            } catch {
+              // ignore
+            }
+            const isVegan = tagList.some((x) => x.toLowerCase() === "vegan");
+            return isVegan ? (
+              <span className="bg-sage/90 backdrop-blur-sm text-white font-bold text-[11px] px-2.5 py-1 rounded-full">
+                🌱 Vegan
               </span>
-            )}
-            {recipe.tags && (() => {
-              try {
-                const tags = JSON.parse(recipe.tags) as string[];
-                return tags.slice(0, 2).map((t) => (
-                  <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    {t}
-                  </span>
-                ));
-              } catch {
-                return null;
-              }
-            })()}
-          </div>
-          <h2 className="font-semibold text-stone-800 group-hover:text-coral-600 transition-colors">
-            {recipe.title}
-          </h2>
-          <p className="text-sm text-stone-500 mt-1">
-            {new Date(recipe.createdAt).toLocaleDateString("de-DE", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
-          </p>
+            ) : null;
+          })()}
         </div>
+      </div>
+
+      {/* Card body */}
+      <div className="p-5">
+        <h3 className="font-display text-lg text-espresso leading-snug mb-2 group-hover:text-terra transition-colors duration-200">
+          {recipe.title}
+        </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-espresso-light font-bold uppercase tracking-wide">
+              {getCategoryLabel(recipe.category) || "—"}
+            </span>
+            <span className="text-espresso-light/30 text-xs">·</span>
+            <span className="text-[11px] text-espresso-light">
+              {new Date(recipe.createdAt).toLocaleDateString("de-DE", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+          <ArrowRight
+            size={14}
+            className="text-terra opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200"
+          />
+        </div>
+      </div>
       </Link>
-    </motion.div>
+    </article>
   );
 }

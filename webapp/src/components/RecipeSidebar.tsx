@@ -1,6 +1,31 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+
+function getCategoryEmoji(category: string | null): string {
+  const map: Record<string, string> = {
+    backen: "🥐",
+    kochen: "🍳",
+    vegan: "🌿",
+  };
+  return (category && map[category]) ?? "🍽️";
+}
+
+function getCategoryLabel(category: string | null): string {
+  if (!category) return "";
+  if (category === "backen") return "Backen";
+  if (category === "kochen") return "Kochen";
+  return category;
+}
+
+function formatDate(d: Date): string {
+  return new Date(d).toLocaleDateString("de-DE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 type Recipe = {
   id: string;
@@ -14,10 +39,12 @@ export function RecipeSidebar({
   recipes,
   currentId,
   title = "Weitere Rezepte",
+  backHref = "/",
 }: {
   recipes: Recipe[];
   currentId: string | null;
   title?: string;
+  backHref?: string;
 }) {
   const filtered = currentId ? recipes.filter((r) => r.id !== currentId) : recipes;
   const display = filtered.slice(0, 5);
@@ -25,48 +52,57 @@ export function RecipeSidebar({
   if (display.length === 0) return null;
 
   return (
-    <div className="sticky top-24">
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-stone-200/80 shadow-lg p-4">
-        <h3 className="font-semibold text-stone-800 mb-3">{title}</h3>
-        <ul className="space-y-2">
+    <div className="lg:sticky lg:top-24 self-start">
+      <div className="bg-warmwhite rounded-2xl border border-espresso/6 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-espresso/6 bg-gradient-to-r from-cream to-warmwhite">
+          <h2 className="font-display italic text-lg text-espresso">{title}</h2>
+        </div>
+        <ul>
           {display.map((r) => (
             <li key={r.id}>
               <Link
                 href={`/recipe/${r.id}`}
-                className="flex gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors group"
+                className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream/60 transition-colors duration-150 border-b border-espresso/4 last:border-0 group"
               >
-                {r.imagePath ? (
-                  <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-cream-dark">
+                  {r.imagePath ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={`/api/uploads/${r.imagePath}`}
                       alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                  </div>
-                ) : (
-                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-coral-400/20 to-amber-100 flex items-center justify-center text-2xl flex-shrink-0">
-                    🍳
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-stone-800 truncate group-hover:text-coral-600 transition-colors">
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-cream-dark to-cream text-2xl">
+                      {getCategoryEmoji(r.category)}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-body font-bold text-sm text-espresso truncate group-hover:text-terra transition-colors duration-150">
                     {r.title}
                   </p>
-                  <p className="text-xs text-stone-500">
-                    {r.category === "backen" ? "🥐 Backen" : r.category === "kochen" ? "🍲 Kochen" : ""}
+                  <p className="text-[11px] text-espresso-light mt-0.5">
+                    {getCategoryLabel(r.category)} · {formatDate(r.createdAt)}
                   </p>
                 </div>
+                <ArrowRight
+                  size={14}
+                  className="text-terra opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity duration-150"
+                />
               </Link>
             </li>
           ))}
         </ul>
-        <Link
-          href="/"
-          className="mt-3 block text-center text-sm text-coral-600 hover:text-coral-500 font-medium"
-        >
-          Alle Rezepte →
-        </Link>
+        <div className="px-5 py-3.5 bg-cream/50 border-t border-espresso/6">
+          <Link
+            href={backHref}
+            className="text-terra font-bold text-sm flex items-center gap-1.5 hover:gap-2.5 transition-all duration-200"
+          >
+            Alle Rezepte
+            <ArrowRight size={14} />
+          </Link>
+        </div>
       </div>
     </div>
   );

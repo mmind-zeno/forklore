@@ -48,21 +48,23 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 bg-gradient-to-br from-amber-50 via-orange-50/90 via-teal-50/40 to-rose-50/60">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-cream">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 group">
-            <span className="text-xl font-bold text-stone-800 group-hover:text-coral-600 transition-colors">Forklore</span>
+            <span className="font-display italic text-2xl font-bold text-espresso group-hover:text-terra transition-colors">
+              Forklore
+            </span>
           </Link>
         </div>
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-stone-200 shadow-xl shadow-coral-500/5 p-8">
-          <h1 className="text-2xl font-bold text-stone-800 mb-2">Anmelden</h1>
-          <p className="text-stone-600 text-sm mb-6">
+        <div className="bg-warmwhite rounded-2xl border border-espresso/6 shadow-card p-8">
+          <h1 className="font-display text-2xl font-bold text-espresso mb-2">Anmelden</h1>
+          <p className="text-espresso-mid text-sm mb-6">
             Melde dich an, um deine Rezepte zu verwalten.
           </p>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-stone-700 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-bold text-espresso mb-1.5">
                 E-Mail
               </label>
               <input
@@ -72,12 +74,12 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 bg-white text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-coral-500/30 focus:border-coral-500"
+                className="w-full px-4 py-2.5 rounded-xl border-2 border-espresso/10 bg-cream text-espresso placeholder:text-espresso-light focus:outline-none focus:ring-2 focus:ring-terra/20 focus:border-terra transition"
                 placeholder="deine@email.de"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-stone-700 mb-1.5">
+              <label htmlFor="password" className="block text-sm font-bold text-espresso mb-1.5">
                 Passwort
               </label>
               <input
@@ -87,19 +89,19 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-stone-200 bg-white text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-coral-500/30 focus:border-coral-500"
+                className="w-full px-4 py-2.5 rounded-xl border-2 border-espresso/10 bg-cream text-espresso placeholder:text-espresso-light focus:outline-none focus:ring-2 focus:ring-terra/20 focus:border-terra transition"
                 placeholder="••••••••"
               />
             </div>
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl font-bold">
                 {error}
               </p>
             )}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-coral-500 to-coral-600 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-coral-500/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 bg-gradient-cta text-white rounded-xl font-bold shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? "Wird angemeldet…" : "Anmelden"}
             </button>
@@ -112,7 +114,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Laden…</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-cream">Laden…</div>}>
       <LoginForm />
     </Suspense>
   );

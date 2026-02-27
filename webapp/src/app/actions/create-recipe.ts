@@ -17,6 +17,51 @@ export type RecipeInput = {
   tags?: string[];
 };
 
+const RECIPE_JSON_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    title: { type: "string" as const },
+    ingredients: {
+      type: "array" as const,
+      items: {
+        type: "object" as const,
+        properties: {
+          amount: { type: "string" as const },
+          unit: { type: "string" as const },
+          name: { type: "string" as const },
+        },
+        required: ["amount", "unit", "name"] as const,
+        additionalProperties: false,
+      },
+    },
+    steps: {
+      type: "array" as const,
+      items: { type: "string" as const },
+    },
+    category: { type: "string" as const, enum: ["backen", "kochen", ""] },
+    tags: {
+      type: "array" as const,
+      items: { type: "string" as const },
+    },
+  },
+  required: ["title", "ingredients", "steps", "category", "tags"] as const,
+  additionalProperties: false,
+};
+
+function extractRecipeJson(content: string): string | null {
+  if (!content?.trim()) return null;
+  const trimmed = content.trim();
+  // 1. Markdown-Codeblock: ```json ... ``` oder ``` ... ```
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    const inner = codeBlockMatch[1].trim();
+    if (inner.startsWith("{")) return inner;
+  }
+  // 2. Reines JSON-Objekt
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+  return jsonMatch ? jsonMatch[0] : null;
+}
+
 export async function createRecipe(formData: FormData): Promise<{ success: boolean; error?: string }> {
   try {
     const apiKey = await getOpenAIApiKey();
@@ -43,10 +88,13 @@ export async function createRecipe(formData: FormData): Promise<{ success: boole
         {
           role: "system",
           content: `Du bist ein Koch-Assistent. Extrahiere aus dem folgenden Rezept-Text ein strukturiertes Rezept.
-Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Code-Block) in diesem Format:
+Antworte NUR mit einem JSON-Objekt in diesem Format:
 {"title":"Rezeptname","ingredients":[{"amount":"Menge","unit":"Einheit","name":"Zutat"}],"steps":["Schritt 1","Schritt 2"],"category":"backen oder kochen","tags":["vegan","schnell"]}
 - category: "backen" für Kuchen, Kekse, Brot, Teig; "kochen" für Suppen, Hauptgerichte, Salate.
 - tags: optional Array, z.B. ["vegan"], ["vegetarisch"], ["schnell"] wenn zutreffend.
+- Für amount und unit: leere Zeichenkette "" verwenden, wenn keine Angabe möglich ist.
+- Für category: "" verwenden wenn unklar; sonst "backen" oder "kochen".
+- Für tags: leeres Array [] wenn keine Tags zutreffen.
 Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
         },
       ];
@@ -64,6 +112,7 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
               type: "image_url",
               image_url: {
                 url: `data:${resizedImage.mimeType};base64,${resizedImage.buffer.toString("base64")}`,
+                detail: "low",
               },
             },
           ],
@@ -78,16 +127,32 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages,
-        max_tokens: 1024,
+        max_tokens: 1536,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "recipe",
+            strict: true,
+            schema: RECIPE_JSON_SCHEMA,
+          },
+        },
       });
 
       const content = completion.choices[0]?.message?.content?.trim();
       if (!content) {
+        const refusal = completion.choices[0]?.message?.refusal;
+        if (refusal) {
+          return { success: false, error: "Die KI konnte das Rezept nicht extrahieren. Bitte Bild und Text prüfen." };
+        }
         return { success: false, error: "Keine Antwort von der KI" };
       }
 
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
+      let jsonStr = extractRecipeJson(content);
+      if (!jsonStr) {
+        jsonStr = content.match(/\{[\s\S]*\}/)?.[0] ?? null;
+      }
+      if (!jsonStr) {
+        console.error("createRecipe: GPT content without JSON:", content?.slice(0, 500));
         return {
           success: false,
           error: content.startsWith("I'm sorry")
@@ -95,7 +160,7 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
             : "Ungültige Antwort der KI. Bitte erneut versuchen.",
         };
       }
-      recipe = JSON.parse(jsonMatch[0]);
+      recipe = JSON.parse(jsonStr);
 
       if (resizedImage) {
         const uploadsDir = path.join(process.cwd(), "uploads");
@@ -126,10 +191,13 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
           {
             role: "system",
             content: `Du bist ein Koch-Assistent. Extrahiere aus dem Bild und dem gesprochenen Text ein strukturiertes Rezept.
-Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Code-Block) in diesem Format:
+Antworte NUR mit einem JSON-Objekt in diesem Format:
 {"title":"Rezeptname","ingredients":[{"amount":"Menge","unit":"Einheit","name":"Zutat"}],"steps":["Schritt 1","Schritt 2"],"category":"backen oder kochen","tags":["vegan","schnell"]}
 - category: "backen" für Kuchen, Kekse, Brot; "kochen" für Suppen, Hauptgerichte.
 - tags: optional Array, z.B. ["vegan"], ["schnell"] wenn zutreffend.
+- Für amount und unit: leere Zeichenkette "" verwenden, wenn keine Angabe möglich ist.
+- Für category: "" verwenden wenn unklar; sonst "backen" oder "kochen".
+- Für tags: leeres Array [] wenn keine Tags zutreffen.
 Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
           },
           {
@@ -140,21 +208,38 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
                 type: "image_url",
                 image_url: {
                   url: `data:${imageType};base64,${imageBuffer.toString("base64")}`,
+                  detail: "low",
                 },
               },
             ],
           },
         ],
-        max_tokens: 1024,
+        max_tokens: 1536,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "recipe",
+            strict: true,
+            schema: RECIPE_JSON_SCHEMA,
+          },
+        },
       });
 
       const content = completion.choices[0]?.message?.content?.trim();
       if (!content) {
+        const refusal = completion.choices[0]?.message?.refusal;
+        if (refusal) {
+          return { success: false, error: "Die KI konnte das Rezept nicht extrahieren. Bitte Bild und Aufnahme prüfen." };
+        }
         return { success: false, error: "Keine Antwort von der KI" };
       }
 
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
+      let jsonStr = extractRecipeJson(content);
+      if (!jsonStr) {
+        jsonStr = content.match(/\{[\s\S]*\}/)?.[0] ?? null;
+      }
+      if (!jsonStr) {
+        console.error("createRecipe: GPT content without JSON:", content?.slice(0, 500));
         return {
           success: false,
           error: content.startsWith("I'm sorry")
@@ -162,7 +247,7 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
             : "Ungültige Antwort der KI. Bitte erneut versuchen.",
         };
       }
-      recipe = JSON.parse(jsonMatch[0]);
+      recipe = JSON.parse(jsonStr);
 
       const uploadsDir = path.join(process.cwd(), "uploads");
       await mkdir(uploadsDir, { recursive: true });

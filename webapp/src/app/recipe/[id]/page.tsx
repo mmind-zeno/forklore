@@ -22,9 +22,14 @@ export default async function RecipePage({
 
   let ingredients: Array<{ amount?: string; unit?: string; name: string }>;
   let steps: string[];
+  let tags: string[] = [];
   try {
     ingredients = JSON.parse(recipe.ingredients) as Array<{ amount?: string; unit?: string; name: string }>;
     steps = JSON.parse(recipe.steps) as string[];
+    if (recipe.tags) {
+      const t = JSON.parse(recipe.tags) as string[];
+      if (Array.isArray(t)) tags = t;
+    }
   } catch {
     ingredients = [{ name: "Zutaten konnten nicht geladen werden." }];
     steps = ["Schritte konnten nicht geladen werden."];
@@ -32,10 +37,13 @@ export default async function RecipePage({
 
   return (
     <RecipeDetail
+      recipeId={id}
       title={recipe.title}
       imagePath={recipe.imagePath}
       ingredients={ingredients}
       steps={steps}
+      tags={tags}
+      category={recipe.category}
       relatedRecipes={relatedRecipes}
       currentId={id}
     />

@@ -25,12 +25,15 @@ Forklore/
 └── .env.example
 ```
 
-## Features (v0.4.0)
+## Features (v0.6.0)
 
 - **Notiz-Modus:** Rezept als Text schreiben (optional mit Foto)
 - **Mikrofon-Modus:** Foto + Sprache (Whisper + GPT-4o)
-- KI extrahiert Zutaten und Schritte
-- Rezepte in SQLite speichern
+- KI extrahiert Zutaten und Schritte (category, tags)
+- Rezepte in SQLite speichern (Backen/Kochen)
+- **Vegan-Filter:** Toggle unter Backen/Kochen für vegane Rezepte
+- **Tips & Tricks:** /tips – Ersatzstoffe für vegane Küche (Ei, Milch, Butter, …)
+- **Rezepte bearbeiten/löschen:** Edit-Formular unter /edit/[id], Löschen mit Bestätigung
 - **User-Login:** NextAuth, nur registrierte User (Admin legt an)
 - **Admin:** User-Verwaltung unter /admin (ADMIN_PASSWORD in .env)
 - **Admin Settings:** OpenAI API Key in DB hinterlegbar (Fallback: .env)
@@ -61,9 +64,12 @@ model Recipe {
   id          String   @id @default(cuid())
   title       String
   imagePath   String?
-  ingredients String
-  steps       String
+  ingredients String   // JSON: [{ amount, unit, name }]
+  steps       String   // JSON: string[]
+  category    String?  // "backen" | "kochen"
+  tags        String?  // JSON: ["vegan","schnell",...]
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   userId      String?
   user        User?    @relation(...)
 }
@@ -74,6 +80,8 @@ model Recipe {
 | Datei | Zweck |
 |-------|-------|
 | webapp/src/app/actions/create-recipe.ts | Rezept-Erstellung (Whisper + GPT-4o) |
+| webapp/src/app/actions/update-recipe.ts | Rezept bearbeiten |
+| webapp/src/app/actions/delete-recipe.ts | Rezept löschen (inkl. Bild) |
 | webapp/src/lib/image-resize.ts | Sharp: Bilder max 1024px, JPEG Q82. Fallback: Original bei Sharp-Fehler. |
 | webapp/src/lib/openai.ts | OpenAI API |
 | webapp/prisma/schema.prisma | Recipe-Modell |
@@ -140,6 +148,8 @@ SSL: `ssh hetzner "sudo certbot --nginx -d forklore.mmind.space"` (erledigt)
 
 ## Bekannte Fallstricke
 
+- **SQLite ALTER TABLE:** Bei `ADD COLUMN` keine non-constant DEFAULT (z.B. `datetime('now')`) – Spalte ohne Default anlegen, dann per UPDATE befüllen.
+- **Migration im Deploy:** `deploy-local.ps1` führt nach dem Start automatisch `migrate-recipe-columns.js` aus (updatedAt etc.).
 - **Dockerfile:** Nutzt `prisma db push` mit `USER nextjs`. Bei Volume-Rechte-Problemen (Schema-Änderung schlägt fehl) evtl. aiact-Lösung übernehmen: migrate-Script + Entrypoint als root.
 - **DB-Schema manuell:** Falls User-Tabelle fehlt: `docker run --rm -e DATABASE_URL=file:/app/prisma/dev.db -v recipes_recipes-db:/app/prisma -v /opt/recipes/webapp:/app/src -w /app/src node:20-alpine sh -c 'npx prisma db push --accept-data-loss && npx prisma db seed'`
 - **.env-Änderung:** Nach Änderung von NEXTAUTH_URL etc. `docker compose up -d --force-recreate` (nicht nur restart).

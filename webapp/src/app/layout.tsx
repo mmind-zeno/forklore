@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
+import { Playfair_Display, Lato } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { Footer } from "@/components/Footer";
+import { ScrollRevealProvider } from "@/components/ScrollRevealProvider";
 
-const outfit = Outfit({
+const playfair = Playfair_Display({
   subsets: ["latin"],
-  variable: "--font-outfit",
+  variable: "--font-playfair",
+  weight: ["400", "600", "700", "800"],
+  style: ["normal", "italic"],
+});
+
+const lato = Lato({
+  subsets: ["latin"],
+  variable: "--font-lato",
+  weight: ["300", "400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -20,10 +29,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" className={outfit.variable}>
-      <body className="antialiased font-sans bg-stone-50 min-h-screen flex flex-col">
+    <html lang="de" className={`${playfair.variable} ${lato.variable}`}>
+      <body className="antialiased font-sans text-espresso-mid bg-cream min-h-screen flex flex-col leading-relaxed">
         <Providers>
-          <div className="flex-1 flex flex-col">{children}</div>
+          <ScrollRevealProvider>
+            <div className="flex-1 flex flex-col">{children}</div>
+          </ScrollRevealProvider>
           <Footer />
         </Providers>
       </body>
