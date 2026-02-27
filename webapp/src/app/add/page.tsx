@@ -68,36 +68,42 @@ export default function AddRecipePage() {
     setStatus("Rezept wird verarbeitet...");
     setError("");
 
-    const formData = new FormData();
-    formData.append("mode", mode);
+    try {
+      const formData = new FormData();
+      formData.append("mode", mode);
 
-    if (mode === "note") {
-      formData.append("text", noteText.trim());
-      if (image) {
-        const imageRes = await fetch(image);
+      if (mode === "note") {
+        formData.append("text", noteText.trim());
+        if (image) {
+          const imageRes = await fetch(image);
+          const imageBlob = await imageRes.blob();
+          formData.append("image", imageBlob, "image.jpg");
+        }
+      } else {
+        const imageRes = await fetch(image!);
         const imageBlob = await imageRes.blob();
         formData.append("image", imageBlob, "image.jpg");
+        formData.append("audio", audioBlob!, "audio.webm");
       }
-    } else {
-      const imageRes = await fetch(image!);
-        const imageBlob = await imageRes.blob();
-      formData.append("image", imageBlob, "image.jpg");
-      formData.append("audio", audioBlob!, "audio.webm");
-    }
 
-    const result = await createRecipe(formData);
+      const result = await createRecipe(formData);
 
-    if (result.success) {
-      setStatus("Rezept gespeichert!");
-      setImage(null);
-      setNoteText("");
-      setAudioBlob(null);
-      setTimeout(() => {
-        router.push("/");
-        router.refresh();
-      }, 1200);
-    } else {
-      setError(result.error || "Fehler beim Speichern");
+      if (result.success) {
+        setStatus("Rezept gespeichert!");
+        setImage(null);
+        setNoteText("");
+        setAudioBlob(null);
+        setTimeout(() => {
+          router.push("/");
+          router.refresh();
+        }, 1200);
+      } else {
+        setError(result.error || "Fehler beim Speichern");
+        setStatus("");
+      }
+    } catch (err) {
+      console.error("createRecipe failed", err);
+      setError("Netzwerk- oder Serverfehler beim Speichern. Bitte später erneut versuchen.");
       setStatus("");
     }
   };
