@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 
 function getCategoryEmoji(category: string | null): string {
@@ -33,6 +34,10 @@ type Recipe = {
   imagePath: string | null;
   category: string | null;
   createdAt: Date;
+  ownerName?: string | null;
+  ownerId?: string | null;
+  ratingAverage?: number;
+  ratingCount?: number;
 };
 
 export function RecipeSidebar({
@@ -46,6 +51,7 @@ export function RecipeSidebar({
   title?: string;
   backHref?: string;
 }) {
+  const router = useRouter();
   const filtered = currentId ? recipes.filter((r) => r.id !== currentId) : recipes;
   const display = filtered.slice(0, 5);
 
@@ -83,7 +89,31 @@ export function RecipeSidebar({
                     {r.title}
                   </p>
                   <p className="text-[11px] text-espresso-light mt-0.5">
+                    {(r.ownerName ?? r.ownerId) && (
+                      <>
+                        Geteilt von{" "}
+                        {r.ownerId ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(`/?owner=${encodeURIComponent(r.ownerId!)}${r.ownerName ? `&ownerName=${encodeURIComponent(r.ownerName)}` : ""}`);
+                            }}
+                            className="font-bold text-terra hover:underline text-left"
+                          >
+                            {r.ownerName ?? "Unbekannt"}
+                          </button>
+                        ) : (
+                          <span className="font-medium">{r.ownerName}</span>
+                        )}
+                        {" · "}
+                      </>
+                    )}
                     {getCategoryLabel(r.category)} · {formatDate(r.createdAt)}
+                    {(r.ratingCount ?? 0) > 0 && (
+                      <> · ★ {(r.ratingAverage ?? 0).toFixed(1)} ({r.ratingCount})</>
+                    )}
                   </p>
                 </div>
                 <ArrowRight

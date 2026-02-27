@@ -13,7 +13,10 @@ export default async function RecipePage({
   const session = await getServerSession(authOptions);
   const viewerId = session?.user?.id ?? null;
 
-  const recipe = await prisma.recipe.findUnique({ where: { id } });
+  const recipe = await prisma.recipe.findUnique({
+    where: { id },
+    include: { user: true },
+  });
   if (!recipe) notFound();
 
   // Zugriffsschutz: nur eigene Rezepte oder öffentliche Rezepte anzeigen.
@@ -89,6 +92,8 @@ export default async function RecipePage({
       ratingAverage={ratingAverage}
       ratingCount={ratingCount}
       initialUserRating={viewerStars}
+      ownerName={recipe.user?.name ?? recipe.user?.email ?? null}
+      ownerId={recipe.userId ?? null}
       relatedRecipes={relatedRecipes}
       currentId={id}
     />

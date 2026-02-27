@@ -11,15 +11,25 @@ import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { searchParams: Promise<{ category?: string; vegan?: string; q?: string; main?: string }> };
+type PageProps = {
+  searchParams: Promise<{
+    category?: string;
+    vegan?: string;
+    q?: string;
+    main?: string;
+    owner?: string;
+    ownerName?: string;
+  }>;
+};
 
 export default async function HomePage({ searchParams }: PageProps) {
-  const { category, vegan, q, main } = await searchParams;
+  const { category, vegan, q, main, owner } = await searchParams;
   const filterVegan = vegan === "true";
   const baseFilter = category === "backen" || category === "kochen" ? { category } : {};
   const veganFilter = filterVegan ? { tags: { contains: "vegan" } } : {};
   const searchQuery = (q ?? "").trim();
   const mainIngredient = (main ?? "").trim().toLowerCase();
+  const ownerId = (owner ?? "").trim() || null;
 
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? null;
@@ -27,34 +37,65 @@ export default async function HomePage({ searchParams }: PageProps) {
   // Sichtbarkeits-Filter:
   // - eingeloggte User: eigene Rezepte + alle öffentlichen
   // - Gäste: nur öffentliche Rezepte
-  const visibilityWhere =
+  const baseVisibilityWhere =
     userId != null
       ? {
           OR: [{ userId }, { visibility: "public" }],
         }
       : { visibility: "public" };
 
+  // Wenn nach einem bestimmten User gefiltert wird, nur dessen öffentliche Rezepte anzeigen.
+  const visibilityWhere = ownerId
+    ? { userId: ownerId, visibility: "public" }
+    : baseVisibilityWhere;
+
+  const searchTerms =
+    searchQuery.length > 0
+      ? searchQuery
+          .split(/[,\s]+/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+
+  const searchWhere =
+    searchTerms.length > 0
+      ? {
+          AND: searchTerms.map((term) => ({
+            OR: [
+              { title: { contains: term } },
+              { ingredients: { contains: term } },
+              { tags: { contains: term } },
+            ],
+          })),
+        }
+      : {};
+
+  const mainTerms =
+    mainIngredient.length > 0
+      ? mainIngredient
+          .split(/[,\s]+/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+
+  const mainWhere =
+    mainTerms.length > 0
+      ? {
+          AND: mainTerms.map((term) => ({
+            OR: [
+              { mainIngredients: { contains: term } },
+              { ingredients: { contains: term } },
+            ],
+          })),
+        }
+      : {};
+
   const recipeWhere = {
     ...visibilityWhere,
     ...baseFilter,
     ...veganFilter,
-    ...(searchQuery
-      ? {
-          OR: [
-            { title: { contains: searchQuery } },
-            { ingredients: { contains: searchQuery } },
-            { tags: { contains: searchQuery } },
-          ],
-        }
-      : {}),
-    ...(mainIngredient
-      ? {
-          OR: [
-            { mainIngredients: { contains: mainIngredient } },
-            { ingredients: { contains: mainIngredient } },
-          ],
-        }
-      : {}),
+    ...searchWhere,
+    ...mainWhere,
   };
 
   let recipes: Awaited<ReturnType<typeof prisma.recipe.findMany>> = [];
@@ -65,7 +106,11 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   try {
     [recipes, totalCount, backenCount, kochenCount, sidebarRecipes] = await Promise.all([
-      prisma.recipe.findMany({ where: recipeWhere, orderBy: { createdAt: "desc" } }),
+      prisma.recipe.findMany({
+        where: recipeWhere,
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      }),
       prisma.recipe.count({ where: visibilityWhere }),
       prisma.recipe.count({ where: { ...visibilityWhere, category: "backen" } }),
       prisma.recipe.count({ where: { ...visibilityWhere, category: "kochen" } }),
@@ -73,11 +118,59 @@ export default async function HomePage({ searchParams }: PageProps) {
         where: { ...visibilityWhere, ...baseFilter },
         orderBy: { createdAt: "desc" },
         take: 6,
+        include: { user: { select: { id: true, name: true, email: true } } },
       }),
     ]);
   } catch (err) {
     console.error("HomePage DB error:", err);
   }
+
+  const recipeIds = Array.from(
+    new Set([...recipes.map((r) => r.id), ...sidebarRecipes.map((r) => r.id)])
+  );
+  const ratingAggs =
+    recipeIds.length > 0
+      ? await prisma.rating.groupBy({
+          by: ["recipeId"],
+          where: { recipeId: { in: recipeIds } },
+          _avg: { stars: true },
+          _count: { stars: true },
+        })
+      : [];
+  const ratingByRecipe = new Map(
+    ratingAggs.map((a) => [
+      a.recipeId,
+      { avg: a._avg.stars ?? 0, count: a._count.stars ?? 0 },
+    ])
+  );
+
+  type RecipeWithUser = (typeof recipes)[number] & {
+    user?: { id: string; name: string | null; email: string | null } | null;
+  };
+  const recipesWithMeta = (recipes as RecipeWithUser[]).map((r) => ({
+    id: r.id,
+    title: r.title,
+    imagePath: r.imagePath,
+    category: r.category,
+    tags: r.tags,
+    createdAt: r.createdAt,
+    ownerName: r.user?.name ?? r.user?.email ?? null,
+    ownerId: r.userId ?? null,
+    ratingAverage: ratingByRecipe.get(r.id)?.avg ?? 0,
+    ratingCount: ratingByRecipe.get(r.id)?.count ?? 0,
+  }));
+
+  const sidebarRecipesWithMeta = (sidebarRecipes as RecipeWithUser[]).map((r) => ({
+    id: r.id,
+    title: r.title,
+    imagePath: r.imagePath,
+    category: r.category,
+    createdAt: r.createdAt,
+    ownerName: r.user?.name ?? r.user?.email ?? null,
+    ownerId: r.userId ?? null,
+    ratingAverage: ratingByRecipe.get(r.id)?.avg ?? 0,
+    ratingCount: ratingByRecipe.get(r.id)?.count ?? 0,
+  }));
 
   return (
     <div className="min-h-screen bg-cream">
@@ -208,7 +301,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             ) : (
               <>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {recipes.map((r, i) => (
+                  {recipesWithMeta.map((r, i) => (
                     <RecipeCard key={r.id} recipe={r} index={i} />
                   ))}
                 </div>
@@ -219,7 +312,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           {recipes.length > 0 && sidebarRecipes.length > 0 && (
             <aside className="lg:w-72 flex-shrink-0">
               <RecipeSidebar
-                recipes={sidebarRecipes}
+                recipes={sidebarRecipesWithMeta}
                 currentId={null}
                 title="Zuletzt hinzugefügt"
                 backHref={

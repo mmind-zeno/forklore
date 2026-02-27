@@ -31,6 +31,8 @@ type RecipeDetailProps = {
   ratingAverage?: number;
   ratingCount?: number;
   initialUserRating?: number;
+  ownerName?: string | null;
+  ownerId?: string | null;
 };
 
 function getCategoryLabel(cat: string | null): string {
@@ -54,6 +56,8 @@ export function RecipeDetail({
   ratingAverage = 0,
   ratingCount = 0,
   initialUserRating = 0,
+  ownerName,
+  ownerId,
 }: RecipeDetailProps) {
   const tagList = Array.isArray(tags) ? tags : [];
   const isVegan = tagList.some((t) => t.toLowerCase() === "vegan");
@@ -222,6 +226,19 @@ export function RecipeDetail({
               >
                 {title}
               </motion.h1>
+
+              {ownerName && ownerId && (
+                <p className="mt-2 text-sm text-espresso-mid">
+                  Geteilt von{" "}
+                  <Link
+                    href={`/?owner=${encodeURIComponent(ownerId)}&ownerName=${encodeURIComponent(ownerName)}`}
+                    className="font-bold text-terra hover:text-terra-dark transition-colors"
+                  >
+                    {ownerName}
+                  </Link>
+                </p>
+              )}
+
               <div className="mt-3 flex items-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button

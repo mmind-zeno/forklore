@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Pencil } from "lucide-react";
 
 function getCategoryEmoji(category: string | null): string {
@@ -26,9 +27,14 @@ type Recipe = {
   category: string | null;
   tags: string | null;
   createdAt: Date;
+  ownerName?: string | null;
+  ownerId?: string | null;
+  ratingAverage?: number;
+  ratingCount?: number;
 };
 
 export function RecipeCard({ recipe, index }: { recipe: Recipe; index: number }) {
+  const router = useRouter();
   return (
     <article
       className={`group relative bg-warmwhite rounded-2xl overflow-hidden border border-espresso/5 shadow-sm
@@ -100,6 +106,34 @@ export function RecipeCard({ recipe, index }: { recipe: Recipe; index: number })
         <h3 className="font-display text-lg text-espresso leading-snug mb-2 group-hover:text-terra transition-colors duration-200">
           {recipe.title}
         </h3>
+        {(recipe.ownerName ?? recipe.ownerId) && (
+          <p className="text-[11px] text-espresso-light mb-1.5">
+            Geteilt von{" "}
+            {recipe.ownerId ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  router.push(`/?owner=${encodeURIComponent(recipe.ownerId!)}${recipe.ownerName ? `&ownerName=${encodeURIComponent(recipe.ownerName)}` : ""}`);
+                }}
+                className="font-bold text-terra hover:underline text-left"
+              >
+                {recipe.ownerName ?? "Unbekannt"}
+              </button>
+            ) : (
+              <span className="font-medium">{recipe.ownerName}</span>
+            )}
+          </p>
+        )}
+        {(recipe.ratingCount ?? 0) > 0 && (
+          <p className="text-[11px] text-espresso-light mb-1.5">
+            <span className="text-terra font-bold">
+              ★ {(recipe.ratingAverage ?? 0).toFixed(1)}
+            </span>{" "}
+            ({recipe.ratingCount} Bewertung{(recipe.ratingCount ?? 0) !== 1 ? "en" : ""})
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-espresso-light font-bold uppercase tracking-wide">
