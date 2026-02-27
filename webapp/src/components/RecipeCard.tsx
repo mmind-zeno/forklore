@@ -62,7 +62,10 @@ export function RecipeCard({ recipe, index }: { recipe: Recipe; index: number })
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-              <span className="text-white font-body font-bold text-sm">Rezept ansehen →</span>
+              <span className="text-white font-body font-bold text-sm flex items-center gap-1.5">
+                Rezept ansehen
+                <ArrowRight size={14} />
+              </span>
             </div>
           </>
         ) : (

@@ -188,23 +188,61 @@ export default async function HomePage({ searchParams }: PageProps) {
                 <p className="mt-4 text-espresso-mid text-lg max-w-lg">
                   Deine Rezepte – schnell erfasst, strukturiert gespeichert. Schreib eine Notiz oder sprich dein nächstes Rezept ein.
                 </p>
-                <div className="mt-6 flex flex-wrap gap-6">
+                <div className="w-12 h-0.5 bg-gradient-cta rounded-full mt-6 mb-5" />
+                <div className="flex flex-wrap gap-6">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">🥐</span>
                     <span className="font-bold text-espresso">{backenCount}</span>
-                    <span className="text-espresso-light text-sm">Backen</span>
+                    <span className="text-espresso-light text-sm font-bold uppercase tracking-widest">Backen</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">🍳</span>
                     <span className="font-bold text-espresso">{kochenCount}</span>
-                    <span className="text-espresso-light text-sm">Kochen</span>
+                    <span className="text-espresso-light text-sm font-bold uppercase tracking-widest">Kochen</span>
                   </div>
                 </div>
               </div>
-              <div className="relative h-48 lg:h-64 rounded-2xl overflow-hidden bg-gradient-hero border border-espresso/5 shadow-soft">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-7xl md:text-8xl opacity-40">🍴</span>
-                </div>
+              {/* Rezept-Vorschau rechts: erstes Rezept als Karte */}
+              <div className="relative h-48 lg:h-64 rounded-2xl overflow-hidden border border-espresso/5 shadow-soft">
+                {recipesWithMeta[0] ? (
+                  <>
+                    {recipesWithMeta[0].imagePath ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={`/api/uploads/${recipesWithMeta[0].imagePath}`}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-cream-dark via-cream to-warmwhite flex flex-col items-center justify-center gap-2">
+                        <span className="text-5xl opacity-60">
+                          {recipesWithMeta[0].category === "backen" ? "🥐" : recipesWithMeta[0].category === "kochen" ? "🍳" : "🍽️"}
+                        </span>
+                        <span className="font-display italic text-espresso-light text-sm text-center px-4 line-clamp-2">
+                          {recipesWithMeta[0].title}
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-espresso/75 via-espresso/20 to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest">
+                        {recipesWithMeta[0].category === "backen" ? "Backen" : recipesWithMeta[0].category === "kochen" ? "Kochen" : "Rezept"}
+                      </span>
+                      <p className="font-display italic text-white text-lg leading-tight mt-0.5 drop-shadow-sm">
+                        {recipesWithMeta[0].title}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/recipe/${recipesWithMeta[0].id}`}
+                      className="absolute inset-0"
+                      aria-label={`Rezept ${recipesWithMeta[0].title} ansehen`}
+                    />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-hero">
+                    <span className="text-7xl md:text-8xl opacity-40">🍴</span>
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -213,21 +251,25 @@ export default async function HomePage({ searchParams }: PageProps) {
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="flex-1 min-w-0">
             {/* Page Header + Filter Tabs */}
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h2 className="font-display text-2xl font-bold text-espresso">
-                  Deine Rezepte
-                </h2>
-                <p className="text-sm text-espresso-light mt-0.5">
-                  ✦ Meine Sammlung · <span className="font-bold text-terra">{recipes.length}</span> Rezept{recipes.length !== 1 ? "e" : ""}
-                </p>
+            <div className="bg-gradient-to-br from-cream via-cream-dark/40 to-cream border-b border-terra/8 -mx-6 px-6 pt-8 pb-6 mb-8">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="font-display italic text-terra text-base mb-1">✦ Meine Sammlung</p>
+                  <h2 className="font-display text-3xl md:text-4xl font-bold text-espresso">
+                    Deine Rezepte
+                  </h2>
+                  <p className="text-espresso-light text-sm mt-1 flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-terra" />
+                    <span className="font-bold text-terra">{recipes.length}</span> Rezept{recipes.length !== 1 ? "e" : ""} gespeichert
+                  </p>
+                </div>
+                <Link
+                  href="/add"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-cta px-5 py-2.5 text-white text-sm font-bold shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all"
+                >
+                  + Neues Rezept
+                </Link>
               </div>
-              <Link
-                href="/add"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-cta px-5 py-2.5 text-white text-sm font-bold shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all"
-              >
-                + Neues Rezept
-              </Link>
             </div>
 
             <RecipeSearchBar />
@@ -237,30 +279,30 @@ export default async function HomePage({ searchParams }: PageProps) {
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={filterVegan ? "/?vegan=true" : "/"}
-                  className={`px-4 py-2.5 rounded-full text-sm font-bold transition-all ${
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold transition-all border-2 ${
                     !category
-                      ? "bg-gradient-cta text-white shadow-card"
-                      : "border border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/30 hover:text-terra"
+                      ? "bg-gradient-cta text-white shadow-card border-transparent"
+                      : "border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/40 hover:text-terra hover:bg-terra/5"
                   }`}
                 >
                   Alle ({totalCount})
                 </Link>
                 <Link
                   href={filterVegan ? "/?category=backen&vegan=true" : "/?category=backen"}
-                  className={`px-4 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all border-2 ${
                     category === "backen"
-                      ? "bg-gradient-cta text-white shadow-card"
-                      : "border border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/30 hover:text-terra"
+                      ? "bg-gradient-cta text-white shadow-card border-transparent"
+                      : "border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/40 hover:text-terra hover:bg-terra/5"
                   }`}
                 >
                   🥐 Backen ({backenCount})
                 </Link>
                 <Link
                   href={filterVegan ? "/?category=kochen&vegan=true" : "/?category=kochen"}
-                  className={`px-4 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all border-2 ${
                     category === "kochen"
-                      ? "bg-gradient-cta text-white shadow-card"
-                      : "border border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/30 hover:text-terra"
+                      ? "bg-gradient-cta text-white shadow-card border-transparent"
+                      : "border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/40 hover:text-terra hover:bg-terra/5"
                   }`}
                 >
                   🍳 Kochen ({kochenCount})
@@ -274,7 +316,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             {recipes.length === 0 ? (
               /* Empty State */
               <div className="reveal rounded-2xl bg-warmwhite border border-espresso/6 p-12 text-center shadow-sm">
-                <div className="w-20 h-20 rounded-full bg-cream-dark flex items-center justify-center mx-auto mb-4 text-4xl">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cream-dark to-cream flex items-center justify-center mx-auto mb-4 text-4xl shadow-sm">
                   {filterVegan ? "🌱" : category === "backen" ? "🥐" : category === "kochen" ? "🍳" : "🍽️"}
                 </div>
                 <h2 className="font-display text-xl font-bold text-espresso mb-2">

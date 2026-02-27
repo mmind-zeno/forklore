@@ -43,7 +43,7 @@ export function HeaderWithAuth() {
           : "bg-transparent border-b border-transparent"
       }`}
     >
-      <div className="mx-auto max-w-6xl px-6 py-4">
+      <div className={`mx-auto max-w-6xl px-6 transition-all duration-300 ${isScrolled ? "py-3" : "py-4"}`}>
         <div className="flex items-center justify-between gap-6">
           {/* Logo */}
           <Link href="/" className="shrink-0 flex items-center gap-3 group" aria-label="Forklore Startseite">

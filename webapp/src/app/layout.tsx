@@ -29,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" className={`${playfair.variable} ${lato.variable}`}>
-      <body className="antialiased font-sans text-espresso-mid bg-cream min-h-screen flex flex-col leading-relaxed">
+    <html lang="de" className={`${playfair.variable} ${lato.variable} scroll-smooth`}>
+      <body className="antialiased font-body text-espresso-mid bg-cream min-h-screen flex flex-col leading-relaxed">
         <Providers>
           <ScrollRevealProvider>
             <div className="flex-1 flex flex-col">{children}</div>

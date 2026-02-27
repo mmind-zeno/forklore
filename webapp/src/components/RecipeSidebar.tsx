@@ -61,14 +61,14 @@ export function RecipeSidebar({
     <div className="lg:sticky lg:top-24 self-start">
       <div className="bg-warmwhite rounded-2xl border border-espresso/6 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-espresso/6 bg-gradient-to-r from-cream to-warmwhite">
-          <h2 className="font-display italic text-lg text-espresso">{title}</h2>
+          <h2 className="font-display italic text-lg text-espresso">✦ {title}</h2>
         </div>
         <ul>
           {display.map((r) => (
             <li key={r.id}>
               <Link
                 href={`/recipe/${r.id}`}
-                className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream/60 transition-colors duration-150 border-b border-espresso/4 last:border-0 group"
+                className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream/70 transition-colors duration-150 border-b border-espresso/4 last:border-0 group"
               >
                 <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-cream-dark">
                   {r.imagePath ? (
