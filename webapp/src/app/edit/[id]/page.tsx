@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { EditRecipeForm } from "@/components/EditRecipeForm";
 import { HeaderWithSuspense } from "@/components/HeaderWithSuspense";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export default async function EditRecipePage({
   params,
@@ -10,8 +12,17 @@ export default async function EditRecipePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await getServerSession(authOptions);
+  const viewerId = session?.user?.id ?? null;
+
   const recipe = await prisma.recipe.findUnique({ where: { id } });
   if (!recipe) notFound();
+
+  const isOwner = viewerId != null && recipe.userId === viewerId;
+  const isAdmin = session?.user?.role === "ADMIN";
+  if (!isOwner && !isAdmin) {
+    notFound();
+  }
 
   let ingredients: Array<{ amount?: string; unit?: string; name: string }>;
   let steps: string[];
@@ -55,6 +66,7 @@ export default async function EditRecipePage({
           initialCategory={recipe.category}
           initialTags={tags}
           initialImagePath={recipe.imagePath}
+          initialVisibility={recipe.visibility}
         />
       </main>
     </div>

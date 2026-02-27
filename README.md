@@ -1,4 +1,4 @@
-# Forklore – Recipe App v0.6.2
+# Forklore – Recipe App v0.6.3
 
 Rezepte per Notiz, Foto und Sprache erfassen. Mobile-first Web-App.
 
@@ -13,6 +13,7 @@ Rezepte per Notiz, Foto und Sprache erfassen. Mobile-first Web-App.
 - **Mikrofon-Modus:** Foto + Sprache einsprechen
 - KI extrahiert Zutaten und Schritte (Whisper + GPT-4o)
 - Rezepte in SQLite speichern
+- Persönliche Rezepte pro Benutzer:in, öffentliche Rezepte für alle sichtbar
 - **Admin:** User-Verwaltung unter `/admin`
 
 ## Tech-Stack

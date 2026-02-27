@@ -9,13 +9,19 @@ import path from "path";
 export async function deleteRecipe(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, error: "Nicht angemeldet." };
-    }
+    const userId = session?.user?.id;
+    const userRole = session?.user?.role ?? "USER";
+    if (!userId) return { success: false, error: "Nicht angemeldet." };
 
     const recipe = await prisma.recipe.findUnique({ where: { id } });
     if (!recipe) {
       return { success: false, error: "Rezept nicht gefunden." };
+    }
+
+    const isOwner = recipe.userId != null && recipe.userId === userId;
+    const isAdmin = userRole === "ADMIN";
+    if (!isOwner && !isAdmin) {
+      return { success: false, error: "Keine Berechtigung, dieses Rezept zu löschen." };
     }
 
     await prisma.recipe.delete({ where: { id } });

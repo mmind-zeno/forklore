@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { RecipeDetail } from "@/components/RecipeDetail";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export default async function RecipePage({
   params,
@@ -8,14 +10,36 @@ export default async function RecipePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await getServerSession(authOptions);
+  const viewerId = session?.user?.id ?? null;
+
   const recipe = await prisma.recipe.findUnique({ where: { id } });
   if (!recipe) notFound();
 
-  const relatedFilter = recipe.category
-    ? { category: recipe.category, id: { not: id } }
-    : { id: { not: id } };
+  // Zugriffsschutz: nur eigene Rezepte oder öffentliche Rezepte anzeigen.
+  const isOwner = viewerId != null && recipe.userId === viewerId;
+  const isPublic = recipe.visibility === "public";
+  if (!isOwner && !isPublic) {
+    notFound();
+  }
+
+  const relatedFilterBase =
+    recipe.category != null
+      ? { category: recipe.category, id: { not: id } }
+      : { id: { not: id } };
+
+  const visibilityWhere =
+    viewerId != null
+      ? {
+          OR: [{ userId: viewerId }, { visibility: "public" }],
+        }
+      : { visibility: "public" };
+
   const relatedRecipes = await prisma.recipe.findMany({
-    where: relatedFilter,
+    where: {
+      ...relatedFilterBase,
+      ...visibilityWhere,
+    },
     orderBy: { createdAt: "desc" },
     take: 6,
   });
@@ -44,6 +68,7 @@ export default async function RecipePage({
       steps={steps}
       tags={tags}
       category={recipe.category}
+      visibility={recipe.visibility}
       relatedRecipes={relatedRecipes}
       currentId={id}
     />

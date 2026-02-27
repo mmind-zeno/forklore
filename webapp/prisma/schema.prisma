@@ -28,6 +28,10 @@ model Recipe {
   tags        String?  // JSON: ["vegan","schnell",...]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  /// Sichtbarkeit des Rezepts:
+  /// - "private": nur Besitzer:in
+  /// - "public": für alle Benutzer:innen sichtbar
+  visibility  String   @default("private")
   userId      String?
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

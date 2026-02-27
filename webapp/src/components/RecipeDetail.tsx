@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RecipeSidebar } from "./RecipeSidebar";
-import { Printer, Share2, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Printer, Share2, Pencil, Trash2, Loader2, Globe2, Lock } from "lucide-react";
 import { deleteRecipe } from "@/app/actions/delete-recipe";
 
 type RelatedRecipe = {
@@ -26,6 +26,7 @@ type RecipeDetailProps = {
   category?: string | null;
   relatedRecipes?: RelatedRecipe[];
   currentId?: string;
+  visibility?: string | null;
 };
 
 function getCategoryLabel(cat: string | null): string {
@@ -35,7 +36,18 @@ function getCategoryLabel(cat: string | null): string {
   return cat;
 }
 
-export function RecipeDetail({ recipeId, title, imagePath, ingredients, steps, tags = [], category, relatedRecipes = [], currentId }: RecipeDetailProps) {
+export function RecipeDetail({
+  recipeId,
+  title,
+  imagePath,
+  ingredients,
+  steps,
+  tags = [],
+  category,
+  relatedRecipes = [],
+  currentId,
+  visibility,
+}: RecipeDetailProps) {
   const tagList = Array.isArray(tags) ? tags : [];
   const isVegan = tagList.some((t) => t.toLowerCase() === "vegan");
   const router = useRouter();
@@ -45,6 +57,7 @@ export function RecipeDetail({ recipeId, title, imagePath, ingredients, steps, t
 
   const handleDelete = async () => {
     setIsDeleting(true);
+    setDeleteError("");
     const result = await deleteRecipe(recipeId);
     if (result.success) {
       router.push("/");
@@ -157,11 +170,23 @@ export function RecipeDetail({ recipeId, title, imagePath, ingredients, steps, t
                     🌱 Vegan
                   </span>
                 )}
-                {tagList.filter((t) => t.toLowerCase() !== "vegan").map((t) => (
-                  <span key={t} className="px-3 py-1 rounded-full bg-cream-dark/60 text-espresso-mid text-sm">
-                    {t}
+                {visibility === "public" && (
+                  <span className="px-3 py-1 rounded-full bg-honey-light/30 text-espresso font-bold text-sm flex items-center gap-1.5">
+                    <Globe2 size={14} /> Für alle sichtbar
                   </span>
-                ))}
+                )}
+                {(!visibility || visibility === "private") && (
+                  <span className="px-3 py-1 rounded-full bg-espresso/5 text-espresso-mid font-bold text-sm flex items-center gap-1.5">
+                    <Lock size={14} /> Privat
+                  </span>
+                )}
+                {tagList
+                  .filter((t) => t.toLowerCase() !== "vegan")
+                  .map((t) => (
+                    <span key={t} className="px-3 py-1 rounded-full bg-cream-dark/60 text-espresso-mid text-sm">
+                      {t}
+                    </span>
+                  ))}
               </div>
               <motion.h1
                 initial={{ opacity: 0 }}

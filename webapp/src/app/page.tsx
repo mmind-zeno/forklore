@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { RecipeCard } from "@/components/RecipeCard";
 import { HeaderWithSuspense } from "@/components/HeaderWithSuspense";
+import { RecipeCard } from "@/components/RecipeCard";
 import { RecipeSidebar } from "@/components/RecipeSidebar";
 import { VeganFilterToggle } from "@/components/VeganFilterToggle";
-import { Suspense } from "react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +17,25 @@ export default async function HomePage({ searchParams }: PageProps) {
   const filterVegan = vegan === "true";
   const baseFilter = category === "backen" || category === "kochen" ? { category } : {};
   const veganFilter = filterVegan ? { tags: { contains: "vegan" } } : {};
-  const filter = { ...baseFilter, ...veganFilter };
+
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id ?? null;
+
+  // Sichtbarkeits-Filter:
+  // - eingeloggte User: eigene Rezepte + alle öffentlichen
+  // - Gäste: nur öffentliche Rezepte
+  const visibilityWhere =
+    userId != null
+      ? {
+          OR: [{ userId }, { visibility: "public" }],
+        }
+      : { visibility: "public" };
+
+  const recipeWhere = {
+    ...visibilityWhere,
+    ...baseFilter,
+    ...veganFilter,
+  };
 
   let recipes: Awaited<ReturnType<typeof prisma.recipe.findMany>> = [];
   let totalCount = 0;
@@ -25,11 +45,15 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   try {
     [recipes, totalCount, backenCount, kochenCount, sidebarRecipes] = await Promise.all([
-      prisma.recipe.findMany({ where: filter, orderBy: { createdAt: "desc" } }),
-      prisma.recipe.count(),
-      prisma.recipe.count({ where: { category: "backen" } }),
-      prisma.recipe.count({ where: { category: "kochen" } }),
-      prisma.recipe.findMany({ where: baseFilter, orderBy: { createdAt: "desc" }, take: 6 }),
+      prisma.recipe.findMany({ where: recipeWhere, orderBy: { createdAt: "desc" } }),
+      prisma.recipe.count({ where: visibilityWhere }),
+      prisma.recipe.count({ where: { ...visibilityWhere, category: "backen" } }),
+      prisma.recipe.count({ where: { ...visibilityWhere, category: "kochen" } }),
+      prisma.recipe.findMany({
+        where: { ...visibilityWhere, ...baseFilter },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
     ]);
   } catch (err) {
     console.error("HomePage DB error:", err);

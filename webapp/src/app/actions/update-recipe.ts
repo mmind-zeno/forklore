@@ -13,13 +13,19 @@ export async function updateRecipe(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, error: "Nicht angemeldet." };
-    }
+    const userId = session?.user?.id;
+    const userRole = session?.user?.role ?? "USER";
+    if (!userId) return { success: false, error: "Nicht angemeldet." };
 
     const existing = await prisma.recipe.findUnique({ where: { id } });
     if (!existing) {
       return { success: false, error: "Rezept nicht gefunden." };
+    }
+
+    const isOwner = existing.userId != null && existing.userId === userId;
+    const isAdmin = userRole === "ADMIN";
+    if (!isOwner && !isAdmin) {
+      return { success: false, error: "Keine Berechtigung, dieses Rezept zu bearbeiten." };
     }
 
     const title = (formData.get("title") as string)?.trim();
@@ -27,6 +33,7 @@ export async function updateRecipe(
     const stepsStr = formData.get("steps") as string;
     const category = (formData.get("category") as string) || null;
     const tagsStr = formData.get("tags") as string;
+    const visibilityInput = (formData.get("visibility") as string) || "";
     const imageFile = formData.get("image") as File | null;
 
     if (!title) {
@@ -59,6 +66,9 @@ export async function updateRecipe(
       }
     }
 
+    const visibilityVal =
+      visibilityInput === "public" || visibilityInput === "private" ? visibilityInput : existing.visibility ?? "private";
+
     let imagePath = existing.imagePath;
 
     if (imageFile?.size) {
@@ -90,6 +100,7 @@ export async function updateRecipe(
         category: categoryVal,
         tags: tagsVal,
         imagePath,
+        visibility: visibilityVal,
       },
     });
 

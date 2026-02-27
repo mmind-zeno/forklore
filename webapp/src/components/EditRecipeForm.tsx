@@ -16,6 +16,7 @@ type Props = {
   initialCategory: string | null;
   initialTags: string[];
   initialImagePath: string | null;
+  initialVisibility: string | null;
 };
 
 export function EditRecipeForm({
@@ -26,6 +27,7 @@ export function EditRecipeForm({
   initialCategory,
   initialTags,
   initialImagePath,
+  initialVisibility,
 }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
@@ -35,6 +37,9 @@ export function EditRecipeForm({
   const [tags, setTags] = useState(initialTags.join(", "));
   const [image, setImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [visibility, setVisibility] = useState<"private" | "public">(
+    initialVisibility === "public" ? "public" : "private"
+  );
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,6 +95,7 @@ export function EditRecipeForm({
     formData.append("ingredients", JSON.stringify(ingredients));
     formData.append("steps", JSON.stringify(steps));
     formData.append("category", category || "");
+    formData.append("visibility", visibility);
     const tagList = tags
       .split(",")
       .map((t) => t.trim())
@@ -161,6 +167,37 @@ export function EditRecipeForm({
           placeholder="vegan, schnell, vegetarisch"
           className="w-full p-4 rounded-xl border-2 border-espresso/10 bg-warmwhite focus:border-terra focus:ring-2 focus:ring-terra/20 outline-none transition"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-espresso mb-2">Sichtbarkeit</label>
+        <div className="flex gap-2 p-1.5 bg-warmwhite rounded-xl border border-espresso/10">
+          <button
+            type="button"
+            onClick={() => setVisibility("private")}
+            className={`flex-1 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${
+              visibility === "private"
+                ? "bg-espresso text-cream shadow-card"
+                : "text-espresso-mid hover:bg-cream"
+            }`}
+          >
+            🔒 Nur ich
+          </button>
+          <button
+            type="button"
+            onClick={() => setVisibility("public")}
+            className={`flex-1 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${
+              visibility === "public"
+                ? "bg-gradient-cta text-white shadow-card"
+                : "text-espresso-mid hover:bg-cream"
+            }`}
+          >
+            🌍 Für alle sichtbar
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-espresso-light">
+          Öffentliche Rezepte sind für alle angemeldeten Benutzer:innen sichtbar.
+        </p>
       </div>
 
       <div>

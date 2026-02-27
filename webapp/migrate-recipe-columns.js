@@ -24,6 +24,7 @@ async function main() {
 
   await addColumn("category", "ALTER TABLE Recipe ADD COLUMN category TEXT");
   await addColumn("tags", "ALTER TABLE Recipe ADD COLUMN tags TEXT");
+  await addColumn("visibility", "ALTER TABLE Recipe ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'");
 
   // Add updatedAt as DATETIME so Prisma can store Unix-ms integers
   await addColumn("updatedAt", "ALTER TABLE Recipe ADD COLUMN updatedAt DATETIME");
@@ -46,15 +47,24 @@ async function main() {
         createdAt DATETIME NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
         updatedAt DATETIME NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
         userId TEXT,
+        visibility TEXT NOT NULL DEFAULT 'private',
         CONSTRAINT Recipe_userId_fkey FOREIGN KEY (userId) REFERENCES User(id) ON DELETE SET NULL ON UPDATE CASCADE
       )
     `);
 
-    // Copy existing rows; convert ISO-string updatedAt back to Unix-ms integer
+    // Copy existing rows; convert ISO-string updatedAt back to Unix-ms integer.
+    // visibility wird nicht explizit gesetzt und fällt damit auf den Default "private" zurück.
     await prisma.$executeRawUnsafe(`
       INSERT OR REPLACE INTO Recipe_v2
+        (id, title, imagePath, ingredients, steps, category, tags, createdAt, updatedAt, userId)
       SELECT
-        id, title, imagePath, ingredients, steps, category, tags,
+        id,
+        title,
+        imagePath,
+        ingredients,
+        steps,
+        category,
+        tags,
         createdAt,
         CASE
           WHEN updatedAt LIKE '%-%' THEN CAST(strftime('%s', updatedAt) AS INTEGER) * 1000
