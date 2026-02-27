@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Instagram, Youtube } from "lucide-react";
 
-const VERSION = "0.6.5";
+const VERSION = "0.6.6";
 const YEAR = new Date().getFullYear();
 
 export function Footer() {

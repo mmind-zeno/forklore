@@ -172,6 +172,46 @@ export default async function HomePage({ searchParams }: PageProps) {
     ratingCount: ratingByRecipe.get(r.id)?.count ?? 0,
   }));
 
+  // Beste User nach Bewertungen ihrer Rezepte (Durchschnitt + Anzahl)
+  let topUsers: { id: string; name: string | null; email: string; avatarPath: string | null; avg: number; count: number }[] = [];
+  try {
+    const ratingsWithOwner = await prisma.rating.findMany({
+      include: { recipe: { select: { userId: true } } },
+      where: { recipe: { userId: { not: null } } },
+    });
+    const byOwner = new Map<string, { sum: number; count: number }>();
+    for (const r of ratingsWithOwner) {
+      const uid = r.recipe.userId!;
+      const cur = byOwner.get(uid) ?? { sum: 0, count: 0 };
+      cur.sum += r.stars;
+      cur.count += 1;
+      byOwner.set(uid, cur);
+    }
+    const sorted = Array.from(byOwner.entries())
+      .map(([id, { sum, count }]) => ({ id, avg: sum / count, count }))
+      .sort((a, b) => b.avg - a.avg || b.count - a.count)
+      .slice(0, 10);
+    const userIds = sorted.map((s) => s.id);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, email: true, avatarPath: true },
+    });
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    topUsers = sorted.map((s) => {
+      const u = userMap.get(s.id)!;
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        avatarPath: u.avatarPath,
+        avg: Math.round(s.avg * 10) / 10,
+        count: s.count,
+      };
+    });
+  } catch (err) {
+    console.error("Top users query error:", err);
+  }
+
   return (
     <div className="min-h-screen bg-cream">
       <HeaderWithSuspense />
@@ -244,6 +284,45 @@ export default async function HomePage({ searchParams }: PageProps) {
                   </div>
                 )}
               </div>
+            </div>
+          </section>
+        )}
+
+        {topUsers.length > 0 && (
+          <section className="mb-10 reveal">
+            <h2 className="font-display text-xl font-bold text-espresso mb-4">Beste Köche</h2>
+            <p className="text-sm text-espresso-light mb-4">Nutzer mit den besten Bewertungen für ihre Rezepte</p>
+            <div className="flex flex-wrap gap-4">
+              {topUsers.map((u) => (
+                <Link
+                  key={u.id}
+                  href={`/?owner=${encodeURIComponent(u.id)}&ownerName=${encodeURIComponent(u.name || u.email)}`}
+                  className="flex items-center gap-3 bg-warmwhite rounded-2xl border border-espresso/5 px-4 py-3 shadow-sm hover:shadow-card hover:border-terra/20 transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-cream-dark flex-shrink-0 border border-espresso/10">
+                    {u.avatarPath ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={`/api/uploads/${u.avatarPath}`}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-espresso-mid font-bold text-lg">
+                        {(u.name || u.email).slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-espresso text-sm group-hover:text-terra transition-colors">
+                      {u.name || u.email}
+                    </p>
+                    <p className="text-xs text-espresso-light">
+                      ★ {u.avg.toFixed(1)} · {u.count} Bewertung{u.count !== 1 ? "en" : ""}
+                    </p>
+                  </div>
+                </Link>
+              ))}
             </div>
           </section>
         )}

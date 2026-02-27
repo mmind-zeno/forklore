@@ -48,10 +48,15 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.role = token.role ?? "USER";
+        const user = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { avatarPath: true },
+        });
+        session.user.image = user?.avatarPath ? `/api/uploads/${user.avatarPath}` : null;
       }
       return session;
     },

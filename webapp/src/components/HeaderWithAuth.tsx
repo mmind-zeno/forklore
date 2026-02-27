@@ -80,10 +80,26 @@ export function HeaderWithAuth() {
 
           {/* User + CTA Desktop */}
           <div className="hidden md:flex items-center gap-4 shrink-0">
-            {session?.user?.email && (
-              <span className="text-xs text-espresso-light truncate max-w-[140px]">
-                {session.user.email}
-              </span>
+            {session?.user && (
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 text-espresso-light hover:text-terra transition-colors"
+                title="Profil"
+              >
+                {session.user.image ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={session.user.image}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover border border-espresso/10"
+                  />
+                ) : (
+                  <span className="w-8 h-8 rounded-full bg-cream-dark flex items-center justify-center text-espresso-mid text-xs font-bold">
+                    {(session.user.name || session.user.email || "?").slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <span className="text-xs truncate max-w-[120px]">{session.user.email}</span>
+              </Link>
             )}
             <span className="text-espresso-light/30 mx-1">|</span>
             <Link
@@ -144,6 +160,13 @@ export function HeaderWithAuth() {
               {link.label}
             </Link>
           ))}
+          <Link
+            href="/profile"
+            onClick={() => setMobileOpen(false)}
+            className="font-display text-xl italic text-espresso hover:text-terra transition-colors"
+          >
+            Profil
+          </Link>
           <Link
             href="/add"
             onClick={() => setMobileOpen(false)}

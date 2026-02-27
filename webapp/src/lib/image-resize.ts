@@ -41,3 +41,25 @@ export async function resizeImageForRecipe(
     return { buffer, mimeType: fallbackMimeType, ext };
   }
 }
+
+const AVATAR_SIZE = 200;
+
+/** Resize image to square avatar (200x200). */
+export async function resizeImageForAvatar(
+  buffer: Buffer,
+  fallbackMimeType = "image/jpeg"
+): Promise<{ buffer: Buffer; mimeType: string; ext: string }> {
+  try {
+    const mimeType = "image/jpeg";
+    const ext = "jpg";
+    const result = await sharp(buffer)
+      .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: "cover" })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+    return { buffer: result, mimeType, ext };
+  } catch (err) {
+    console.error("resizeImageForAvatar error:", err);
+    const ext = MIME_TO_EXT[fallbackMimeType] || "jpg";
+    return { buffer, mimeType: fallbackMimeType, ext };
+  }
+}

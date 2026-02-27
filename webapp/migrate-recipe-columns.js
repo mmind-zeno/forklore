@@ -112,6 +112,17 @@ async function main() {
     console.error("ensure Rating table:", e.message);
   }
 
+  try {
+    await prisma.$executeRawUnsafe("ALTER TABLE User ADD COLUMN avatarPath TEXT");
+    console.log("User.avatarPath column added");
+  } catch (e) {
+    if (e.message && e.message.includes("duplicate column name")) {
+      console.log("User.avatarPath already exists");
+    } else {
+      console.error("User.avatarPath:", e.message);
+    }
+  }
+
   console.log("Recipe columns migration done");
 }
 
