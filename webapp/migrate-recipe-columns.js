@@ -25,6 +25,7 @@ async function main() {
   await addColumn("category", "ALTER TABLE Recipe ADD COLUMN category TEXT");
   await addColumn("tags", "ALTER TABLE Recipe ADD COLUMN tags TEXT");
   await addColumn("visibility", "ALTER TABLE Recipe ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'");
+  await addColumn("mainIngredients", "ALTER TABLE Recipe ADD COLUMN mainIngredients TEXT");
 
   // Add updatedAt as DATETIME so Prisma can store Unix-ms integers
   await addColumn("updatedAt", "ALTER TABLE Recipe ADD COLUMN updatedAt DATETIME");
@@ -44,6 +45,7 @@ async function main() {
         steps TEXT NOT NULL,
         category TEXT,
         tags TEXT,
+        mainIngredients TEXT,
         createdAt DATETIME NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
         updatedAt DATETIME NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
         userId TEXT,
@@ -56,7 +58,7 @@ async function main() {
     // visibility wird nicht explizit gesetzt und fällt damit auf den Default "private" zurück.
     await prisma.$executeRawUnsafe(`
       INSERT OR REPLACE INTO Recipe_v2
-        (id, title, imagePath, ingredients, steps, category, tags, createdAt, updatedAt, userId)
+        (id, title, imagePath, ingredients, steps, category, tags, mainIngredients, createdAt, updatedAt, userId)
       SELECT
         id,
         title,
@@ -65,6 +67,7 @@ async function main() {
         steps,
         category,
         tags,
+        mainIngredients,
         createdAt,
         CASE
           WHEN updatedAt LIKE '%-%' THEN CAST(strftime('%s', updatedAt) AS INTEGER) * 1000
@@ -87,6 +90,26 @@ async function main() {
     } catch (e) {
       if (!e.message?.includes("no such column")) console.error("update updatedAt:", e.message);
     }
+  }
+
+  // Rating-Tabelle (pro User und Rezept ein Eintrag)
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS Rating (
+        id        TEXT PRIMARY KEY,
+        recipeId  TEXT NOT NULL,
+        userId    TEXT NOT NULL,
+        stars     INTEGER NOT NULL,
+        comment   TEXT,
+        createdAt DATETIME NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        CONSTRAINT Rating_recipe_fkey FOREIGN KEY (recipeId) REFERENCES Recipe(id) ON DELETE CASCADE,
+        CONSTRAINT Rating_user_fkey   FOREIGN KEY (userId)   REFERENCES User(id)   ON DELETE CASCADE,
+        UNIQUE (recipeId, userId)
+      )
+    `);
+    console.log("Rating table ensured");
+  } catch (e) {
+    console.error("ensure Rating table:", e.message);
   }
 
   console.log("Recipe columns migration done");

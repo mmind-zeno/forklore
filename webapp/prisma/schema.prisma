@@ -16,6 +16,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   recipes   Recipe[]
+  ratings   Rating[]
 }
 
 model Recipe {
@@ -26,6 +27,7 @@ model Recipe {
   steps       String   // JSON: string[]
   category    String?  // "backen" | "kochen"
   tags        String?  // JSON: ["vegan","schnell",...]
+  mainIngredients String? // JSON: ["lachs","brokkoli"]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   /// Sichtbarkeit des Rezepts:
@@ -34,6 +36,20 @@ model Recipe {
   visibility  String   @default("private")
   userId      String?
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ratings     Rating[]
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([recipeId, userId])
 }
 
 model Setting {

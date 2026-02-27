@@ -27,12 +27,19 @@ export default async function EditRecipePage({
   let ingredients: Array<{ amount?: string; unit?: string; name: string }>;
   let steps: string[];
   let tags: string[] = [];
+  let mainIngredientsText = "";
   try {
     ingredients = JSON.parse(recipe.ingredients) as Array<{ amount?: string; unit?: string; name: string }>;
     steps = JSON.parse(recipe.steps) as string[];
     if (recipe.tags) {
       const t = JSON.parse(recipe.tags) as string[];
       if (Array.isArray(t)) tags = t;
+    }
+    if (recipe.mainIngredients) {
+      const mi = JSON.parse(recipe.mainIngredients) as string[];
+      if (Array.isArray(mi)) {
+        mainIngredientsText = mi.join(", ");
+      }
     }
   } catch {
     ingredients = [{ name: "Zutat" }];
@@ -67,6 +74,7 @@ export default async function EditRecipePage({
           initialTags={tags}
           initialImagePath={recipe.imagePath}
           initialVisibility={recipe.visibility}
+          initialMainIngredients={mainIngredientsText}
         />
       </main>
     </div>

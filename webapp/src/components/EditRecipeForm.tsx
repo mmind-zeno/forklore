@@ -17,6 +17,7 @@ type Props = {
   initialTags: string[];
   initialImagePath: string | null;
   initialVisibility: string | null;
+  initialMainIngredients?: string;
 };
 
 export function EditRecipeForm({
@@ -28,6 +29,7 @@ export function EditRecipeForm({
   initialTags,
   initialImagePath,
   initialVisibility,
+  initialMainIngredients,
 }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
@@ -40,6 +42,7 @@ export function EditRecipeForm({
   const [visibility, setVisibility] = useState<"private" | "public">(
     initialVisibility === "public" ? "public" : "private"
   );
+  const [mainIngredientsText, setMainIngredientsText] = useState(initialMainIngredients ?? "");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +104,11 @@ export function EditRecipeForm({
       .map((t) => t.trim())
       .filter(Boolean);
     formData.append("tags", JSON.stringify(tagList));
+    const mainList = mainIngredientsText
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    formData.append("mainIngredients", JSON.stringify(mainList));
     if (imageFile) {
       formData.append("image", imageFile);
     }
@@ -167,6 +175,20 @@ export function EditRecipeForm({
           placeholder="vegan, schnell, vegetarisch"
           className="w-full p-4 rounded-xl border-2 border-espresso/10 bg-warmwhite focus:border-terra focus:ring-2 focus:ring-terra/20 outline-none transition"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-espresso mb-2">Hauptzutaten (kommagetrennt)</label>
+        <input
+          type="text"
+          value={mainIngredientsText}
+          onChange={(e) => setMainIngredientsText(e.target.value)}
+          placeholder="lachs, brokkoli, avocado"
+          className="w-full p-4 rounded-xl border-2 border-espresso/10 bg-warmwhite focus:border-terra focus:ring-2 focus:ring-terra/20 outline-none transition"
+        />
+        <p className="mt-1 text-xs text-espresso-light">
+          Nutze wenige, charakteristische Zutaten – sie können später zum Filtern verwendet werden.
+        </p>
       </div>
 
       <div>

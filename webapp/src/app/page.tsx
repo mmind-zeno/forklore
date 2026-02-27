@@ -5,18 +5,21 @@ import { HeaderWithSuspense } from "@/components/HeaderWithSuspense";
 import { RecipeCard } from "@/components/RecipeCard";
 import { RecipeSidebar } from "@/components/RecipeSidebar";
 import { VeganFilterToggle } from "@/components/VeganFilterToggle";
+import { RecipeSearchBar } from "@/components/RecipeSearchBar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { searchParams: Promise<{ category?: string; vegan?: string }> };
+type PageProps = { searchParams: Promise<{ category?: string; vegan?: string; q?: string; main?: string }> };
 
 export default async function HomePage({ searchParams }: PageProps) {
-  const { category, vegan } = await searchParams;
+  const { category, vegan, q, main } = await searchParams;
   const filterVegan = vegan === "true";
   const baseFilter = category === "backen" || category === "kochen" ? { category } : {};
   const veganFilter = filterVegan ? { tags: { contains: "vegan" } } : {};
+  const searchQuery = (q ?? "").trim();
+  const mainIngredient = (main ?? "").trim().toLowerCase();
 
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? null;
@@ -35,6 +38,23 @@ export default async function HomePage({ searchParams }: PageProps) {
     ...visibilityWhere,
     ...baseFilter,
     ...veganFilter,
+    ...(searchQuery
+      ? {
+          OR: [
+            { title: { contains: searchQuery } },
+            { ingredients: { contains: searchQuery } },
+            { tags: { contains: searchQuery } },
+          ],
+        }
+      : {}),
+    ...(mainIngredient
+      ? {
+          OR: [
+            { mainIngredients: { contains: mainIngredient } },
+            { ingredients: { contains: mainIngredient } },
+          ],
+        }
+      : {}),
   };
 
   let recipes: Awaited<ReturnType<typeof prisma.recipe.findMany>> = [];
@@ -116,6 +136,8 @@ export default async function HomePage({ searchParams }: PageProps) {
                 + Neues Rezept
               </Link>
             </div>
+
+            <RecipeSearchBar />
 
             {/* Filter Tabs */}
             <div className="flex flex-wrap items-center gap-4 mb-8">

@@ -34,6 +34,7 @@ export async function updateRecipe(
     const category = (formData.get("category") as string) || null;
     const tagsStr = formData.get("tags") as string;
     const visibilityInput = (formData.get("visibility") as string) || "";
+    const mainIngredientsStr = formData.get("mainIngredients") as string;
     const imageFile = formData.get("image") as File | null;
 
     if (!title) {
@@ -69,6 +70,20 @@ export async function updateRecipe(
     const visibilityVal =
       visibilityInput === "public" || visibilityInput === "private" ? visibilityInput : existing.visibility ?? "private";
 
+    let mainIngredientsVal: string | null = existing.mainIngredients ?? null;
+    if (mainIngredientsStr?.trim()) {
+      try {
+        const parsed = JSON.parse(mainIngredientsStr) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          mainIngredientsVal = JSON.stringify(parsed);
+        }
+      } catch {
+        // optional Feld – Fehler ignorieren
+      }
+    } else {
+      mainIngredientsVal = null;
+    }
+
     let imagePath = existing.imagePath;
 
     if (imageFile?.size) {
@@ -101,6 +116,7 @@ export async function updateRecipe(
         tags: tagsVal,
         imagePath,
         visibility: visibilityVal,
+        mainIngredients: mainIngredientsVal,
       },
     });
 

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { RecipeSidebar } from "./RecipeSidebar";
 import { Printer, Share2, Pencil, Trash2, Loader2, Globe2, Lock } from "lucide-react";
 import { deleteRecipe } from "@/app/actions/delete-recipe";
+import { rateRecipe } from "@/app/actions/rate-recipe";
 
 type RelatedRecipe = {
   id: string;
@@ -27,6 +28,9 @@ type RecipeDetailProps = {
   relatedRecipes?: RelatedRecipe[];
   currentId?: string;
   visibility?: string | null;
+  ratingAverage?: number;
+  ratingCount?: number;
+  initialUserRating?: number;
 };
 
 function getCategoryLabel(cat: string | null): string {
@@ -47,6 +51,9 @@ export function RecipeDetail({
   relatedRecipes = [],
   currentId,
   visibility,
+  ratingAverage = 0,
+  ratingCount = 0,
+  initialUserRating = 0,
 }: RecipeDetailProps) {
   const tagList = Array.isArray(tags) ? tags : [];
   const isVegan = tagList.some((t) => t.toLowerCase() === "vegan");
@@ -54,6 +61,11 @@ export function RecipeDetail({
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [userRating, setUserRating] = useState(initialUserRating);
+  const [avgRating, setAvgRating] = useState(ratingAverage);
+  const [ratingCountState, setRatingCountState] = useState(ratingCount);
+  const [ratingError, setRatingError] = useState("");
+  const [isRating, setIsRating] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -66,6 +78,20 @@ export function RecipeDetail({
       setDeleteError(result.error || "Fehler beim Löschen");
       setIsDeleting(false);
     }
+  };
+
+  const handleRate = async (value: number) => {
+    setIsRating(true);
+    setRatingError("");
+    const result = await rateRecipe(recipeId, value);
+    if (result.success && typeof result.average === "number" && typeof result.count === "number" && typeof result.stars === "number") {
+      setUserRating(result.stars);
+      setAvgRating(result.average);
+      setRatingCountState(result.count);
+    } else {
+      setRatingError(result.error || "Bewertung fehlgeschlagen.");
+    }
+    setIsRating(false);
   };
 
   return (
@@ -196,6 +222,27 @@ export function RecipeDetail({
               >
                 {title}
               </motion.h1>
+              <div className="mt-3 flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => handleRate(star)}
+                    disabled={isRating}
+                    className={`text-lg ${
+                      star <= userRating ? "text-terra" : "text-espresso-light"
+                    } hover:scale-110 transition-transform`}
+                    aria-label={`${star} Sterne geben`}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span className="text-sm text-espresso-mid">
+                  {avgRating.toFixed(1)} · {ratingCountState} Bewertung
+                  {ratingCountState === 1 ? "" : "en"}
+                </span>
+              </div>
+              {ratingError && <p className="text-xs text-red-500 mt-1">{ratingError}</p>}
             </div>
 
             {/* Ingredients – Sage Box */}

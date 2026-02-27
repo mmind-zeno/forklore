@@ -44,6 +44,23 @@ export default async function RecipePage({
     take: 6,
   });
 
+  const [agg, userRating] = await Promise.all([
+    prisma.rating.aggregate({
+      where: { recipeId: id },
+      _avg: { stars: true },
+      _count: { stars: true },
+    }),
+    viewerId
+      ? prisma.rating.findUnique({
+          where: { recipeId_userId: { recipeId: id, userId: viewerId } },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const ratingAverage = agg._avg.stars ?? 0;
+  const ratingCount = agg._count.stars;
+  const viewerStars = userRating?.stars ?? 0;
+
   let ingredients: Array<{ amount?: string; unit?: string; name: string }>;
   let steps: string[];
   let tags: string[] = [];
@@ -69,6 +86,9 @@ export default async function RecipePage({
       tags={tags}
       category={recipe.category}
       visibility={recipe.visibility}
+      ratingAverage={ratingAverage}
+      ratingCount={ratingCount}
+      initialUserRating={viewerStars}
       relatedRecipes={relatedRecipes}
       currentId={id}
     />
