@@ -123,6 +123,23 @@ async function main() {
     }
   }
 
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS UserFavorite (
+        id        TEXT PRIMARY KEY,
+        userId    TEXT NOT NULL,
+        recipeId  TEXT NOT NULL,
+        createdAt DATETIME NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        CONSTRAINT UserFavorite_user_fkey   FOREIGN KEY (userId)   REFERENCES User(id)   ON DELETE CASCADE,
+        CONSTRAINT UserFavorite_recipe_fkey FOREIGN KEY (recipeId)  REFERENCES Recipe(id) ON DELETE CASCADE,
+        UNIQUE (userId, recipeId)
+      )
+    `);
+    console.log("UserFavorite table ensured");
+  } catch (e) {
+    console.error("UserFavorite table:", e.message);
+  }
+
   console.log("Recipe columns migration done");
 }
 

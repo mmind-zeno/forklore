@@ -19,12 +19,14 @@ type PageProps = {
     main?: string;
     owner?: string;
     ownerName?: string;
+    favorites?: string;
   }>;
 };
 
 export default async function HomePage({ searchParams }: PageProps) {
-  const { category, vegan, q, main, owner } = await searchParams;
+  const { category, vegan, q, main, owner, favorites } = await searchParams;
   const filterVegan = vegan === "true";
+  const filterFavorites = favorites === "true";
   const baseFilter = category === "backen" || category === "kochen" ? { category } : {};
   const veganFilter = filterVegan ? { tags: { contains: "vegan" } } : {};
   const searchQuery = (q ?? "").trim();
@@ -90,19 +92,34 @@ export default async function HomePage({ searchParams }: PageProps) {
         }
       : {};
 
+  let favoriteRecipeIds: string[] = [];
+  if (userId && filterFavorites) {
+    const favs = await prisma.userFavorite.findMany({
+      where: { userId },
+      select: { recipeId: true },
+    });
+    favoriteRecipeIds = favs.map((f) => f.recipeId);
+  }
+
   const recipeWhere = {
     ...visibilityWhere,
     ...baseFilter,
     ...veganFilter,
     ...searchWhere,
     ...mainWhere,
+    ...(filterFavorites && userId ? { id: { in: favoriteRecipeIds.length > 0 ? favoriteRecipeIds : [] } } : {}),
   };
 
   let recipes: Awaited<ReturnType<typeof prisma.recipe.findMany>> = [];
   let totalCount = 0;
   let backenCount = 0;
   let kochenCount = 0;
+  let favoriteCount = 0;
   let sidebarRecipes: Awaited<ReturnType<typeof prisma.recipe.findMany>> = [];
+
+  if (userId) {
+    favoriteCount = await prisma.userFavorite.count({ where: { userId } });
+  }
 
   try {
     [recipes, totalCount, backenCount, kochenCount, sidebarRecipes] = await Promise.all([
@@ -353,19 +370,55 @@ export default async function HomePage({ searchParams }: PageProps) {
 
             <RecipeSearchBar />
 
+            {/* Vorrat: Kochen mit dem, was du da hast */}
+            <div className="mb-6 rounded-2xl bg-gradient-to-br from-sage/10 to-sage/5 border border-sage/20 p-4 md:p-5">
+              <p className="font-display italic text-sage-dark text-sm mb-1">Kochen mit dem, was du da hast</p>
+              <p className="text-espresso-mid text-xs mb-3">Hauptzutaten eingeben – Rezepte finden, die dazu passen</p>
+              <form action="/" method="get" className="flex flex-wrap gap-2">
+                {filterVegan && <input type="hidden" name="vegan" value="true" />}
+                {category && <input type="hidden" name="category" value={category} />}
+                {filterFavorites && <input type="hidden" name="favorites" value="true" />}
+                <input
+                  type="text"
+                  name="main"
+                  defaultValue={mainIngredient}
+                  placeholder="z.B. Lachs, Dill, Zitrone"
+                  className="flex-1 min-w-[200px] rounded-full border border-sage/30 bg-white/80 px-4 py-2.5 text-sm text-espresso placeholder:text-espresso-light/60 focus:outline-none focus:ring-2 focus:ring-sage/40"
+                />
+                <button
+                  type="submit"
+                  className="rounded-full bg-sage text-white px-4 py-2.5 text-sm font-bold hover:bg-sage-dark transition-colors"
+                >
+                  Rezepte finden
+                </button>
+              </form>
+            </div>
+
             {/* Filter Tabs */}
             <div className="flex flex-wrap items-center gap-4 mb-8">
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={filterVegan ? "/?vegan=true" : "/"}
                   className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold transition-all border-2 ${
-                    !category
+                    !category && !filterFavorites
                       ? "bg-gradient-cta text-white shadow-card border-transparent"
                       : "border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/40 hover:text-terra hover:bg-terra/5"
                   }`}
                 >
                   Alle ({totalCount})
                 </Link>
+                {userId != null && (
+                  <Link
+                    href={filterVegan ? "/?favorites=true&vegan=true" : "/?favorites=true"}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all border-2 ${
+                      filterFavorites
+                        ? "bg-gradient-cta text-white shadow-card border-transparent"
+                        : "border-espresso/10 bg-warmwhite text-espresso-mid hover:border-terra/40 hover:text-terra hover:bg-terra/5"
+                    }`}
+                  >
+                    ❤️ Favoriten ({favoriteCount})
+                  </Link>
+                )}
                 <Link
                   href={filterVegan ? "/?category=backen&vegan=true" : "/?category=backen"}
                   className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all border-2 ${
@@ -396,27 +449,31 @@ export default async function HomePage({ searchParams }: PageProps) {
               /* Empty State */
               <div className="reveal rounded-2xl bg-warmwhite border border-espresso/6 p-12 text-center shadow-sm">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cream-dark to-cream flex items-center justify-center mx-auto mb-4 text-4xl shadow-sm">
-                  {filterVegan ? "🌱" : category === "backen" ? "🥐" : category === "kochen" ? "🍳" : "🍽️"}
+                  {filterFavorites ? "❤️" : filterVegan ? "🌱" : category === "backen" ? "🥐" : category === "kochen" ? "🍳" : "🍽️"}
                 </div>
                 <h2 className="font-display text-xl font-bold text-espresso mb-2">
-                  {filterVegan
-                    ? "Keine veganen Rezepte"
-                    : !category
-                      ? "Noch keine Rezepte"
-                      : `Noch keine ${category === "backen" ? "Back" : "Koch"}rezepte`}
+                  {filterFavorites
+                    ? "Noch keine Favoriten"
+                    : filterVegan
+                      ? "Keine veganen Rezepte"
+                      : !category
+                        ? "Noch keine Rezepte"
+                        : `Noch keine ${category === "backen" ? "Back" : "Koch"}rezepte`}
                 </h2>
                 <p className="text-espresso-light mb-6 max-w-sm mx-auto">
-                  {filterVegan
-                    ? "Schalte den Vegan-Filter aus oder füge ein veganes Rezept hinzu."
-                    : category
-                      ? `Füge dein erstes ${category === "backen" ? "Back" : "Koch"}rezept hinzu.`
-                      : "Schreib eine Notiz oder sprich dein erstes Rezept ein."}
+                  {filterFavorites
+                    ? "Markiere Rezepte auf der Detailseite mit dem Herz als Favorit – sie erscheinen hier."
+                    : filterVegan
+                      ? "Schalte den Vegan-Filter aus oder füge ein veganes Rezept hinzu."
+                      : category
+                        ? `Füge dein erstes ${category === "backen" ? "Back" : "Koch"}rezept hinzu.`
+                        : "Schreib eine Notiz oder sprich dein erstes Rezept ein."}
                 </p>
                 <Link
-                  href="/add"
+                  href={filterFavorites ? "/" : "/add"}
                   className="inline-flex items-center gap-2 rounded-full bg-gradient-cta px-6 py-3 text-white font-bold shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all"
                 >
-                  Erstes Rezept hinzufügen →
+                  {filterFavorites ? "Alle Rezepte anzeigen →" : "Erstes Rezept hinzufügen →"}
                 </Link>
               </div>
             ) : (

@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RecipeSidebar } from "./RecipeSidebar";
-import { Printer, Share2, Pencil, Trash2, Loader2, Globe2, Lock } from "lucide-react";
+import { Printer, Share2, Pencil, Trash2, Loader2, Globe2, Lock, Heart } from "lucide-react";
 import { deleteRecipe } from "@/app/actions/delete-recipe";
 import { rateRecipe } from "@/app/actions/rate-recipe";
+import { toggleFavorite } from "@/app/actions/toggle-favorite";
 
 type RelatedRecipe = {
   id: string;
@@ -33,6 +34,8 @@ type RecipeDetailProps = {
   initialUserRating?: number;
   ownerName?: string | null;
   ownerId?: string | null;
+  initialIsFavorite?: boolean;
+  canFavorite?: boolean;
 };
 
 function getCategoryLabel(cat: string | null): string {
@@ -58,6 +61,8 @@ export function RecipeDetail({
   initialUserRating = 0,
   ownerName,
   ownerId,
+  initialIsFavorite = false,
+  canFavorite = false,
 }: RecipeDetailProps) {
   const tagList = Array.isArray(tags) ? tags : [];
   const isVegan = tagList.some((t) => t.toLowerCase() === "vegan");
@@ -66,6 +71,8 @@ export function RecipeDetail({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [userRating, setUserRating] = useState(initialUserRating);
+  const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [avgRating, setAvgRating] = useState(ratingAverage);
   const [ratingCountState, setRatingCountState] = useState(ratingCount);
   const [ratingError, setRatingError] = useState("");
@@ -98,6 +105,17 @@ export function RecipeDetail({
     setIsRating(false);
   };
 
+  const handleToggleFavorite = async () => {
+    if (!canFavorite || isTogglingFavorite) return;
+    setIsTogglingFavorite(true);
+    const result = await toggleFavorite(recipeId);
+    if (result.success) {
+      setIsFavorite(result.isFavorite);
+      router.refresh();
+    }
+    setIsTogglingFavorite(false);
+  };
+
   return (
     <div className="min-h-screen bg-cream pb-24">
       <header className="sticky top-0 z-10 bg-cream/95 backdrop-blur-xl border-b border-espresso/6 px-6 py-3 shadow-soft">
@@ -109,6 +127,22 @@ export function RecipeDetail({
             ← Zurück
           </Link>
           <div className="flex items-center gap-2">
+            {canFavorite && (
+              <button
+                type="button"
+                onClick={handleToggleFavorite}
+                disabled={isTogglingFavorite}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-bold transition-colors ${
+                  isFavorite
+                    ? "border-terra bg-terra/10 text-terra hover:bg-terra/20"
+                    : "border-espresso/20 text-espresso hover:bg-cream-dark"
+                }`}
+                aria-label={isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
+              >
+                {isTogglingFavorite ? <Loader2 size={15} className="animate-spin" /> : <Heart size={15} fill={isFavorite ? "currentColor" : "none"} />}
+                <span className="hidden sm:inline">{isFavorite ? "In Favoriten" : "Favorit"}</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowDelete(true)}
