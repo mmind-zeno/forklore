@@ -8,38 +8,54 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  password   String
-  name       String?
-  avatarPath String?  // relativer Pfad zu /api/uploads (Profilbild)
-  role       String   @default("USER") // "USER" | "ADMIN"
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  recipes    Recipe[]
-  ratings    Rating[]
-  favorites  UserFavorite[]
+  id          String          @id @default(cuid())
+  email       String          @unique
+  password    String
+  name        String?
+  avatarPath  String?         // relativer Pfad zu /api/uploads (Profilbild)
+  role        String          @default("USER") // "USER" | "ADMIN"
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  recipes     Recipe[]
+  ratings     Rating[]
+  favorites   UserFavorite[]
+  mealPlans   MealPlanEntry[]
 }
 
 model Recipe {
-  id          String   @id @default(cuid())
-  title       String
-  imagePath   String?  // relativer Pfad zu /uploads
-  ingredients String   // JSON: [{ amount, unit, name }]
-  steps       String   // JSON: string[]
-  category    String?  // "backen" | "kochen"
-  tags        String?  // JSON: ["vegan","schnell",...]
-  mainIngredients String? // JSON: ["lachs","brokkoli"]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String           @id @default(cuid())
+  title           String
+  imagePath       String?          // relativer Pfad zu /uploads
+  ingredients     String           // JSON: [{ amount, unit, name }]
+  steps           String           // JSON: string[]
+  category        String?          // "backen" | "kochen"
+  tags            String?          // JSON: ["vegan","schnell",...]
+  mainIngredients String?          // JSON: ["lachs","brokkoli"]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   /// Sichtbarkeit des Rezepts:
   /// - "private": nur Besitzer:in
   /// - "public": für alle Benutzer:innen sichtbar
-  visibility  String   @default("private")
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  ratings     Rating[]
-  favoritedBy UserFavorite[]
+  visibility      String           @default("private")
+  userId          String?
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ratings         Rating[]
+  favoritedBy     UserFavorite[]
+  mealPlanEntries MealPlanEntry[]
+}
+
+/// Wochenplan: Rezept einem Wochentag zuordnen. weekStart = Montag 00:00 UTC.
+model MealPlanEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  weekStart DateTime // Montag der Woche (nur Datum relevant)
+  dayOfWeek Int      // 0 = Montag .. 6 = Sonntag
+  recipeId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart, dayOfWeek])
 }
 
 model UserFavorite {

@@ -24,12 +24,14 @@ export function HeaderWithAuth() {
     { href: "/?category=backen", label: "Backen" },
     { href: "/?category=kochen", label: "Kochen" },
     { href: "/tips", label: "Tips & Tricks" },
+    ...(session?.user ? [{ href: "/plan", label: "Wochenplan" }] : []),
   ];
 
   const category = searchParams.get("category");
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/" && !pathname.includes("recipe") && !pathname.includes("edit");
     if (href === "/tips") return pathname === "/tips";
+    if (href === "/plan") return pathname === "/plan";
     if (href === "/?category=backen") return category === "backen";
     if (href === "/?category=kochen") return category === "kochen";
     return false;

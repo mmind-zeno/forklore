@@ -140,6 +140,25 @@ async function main() {
     console.error("UserFavorite table:", e.message);
   }
 
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS MealPlanEntry (
+        id        TEXT PRIMARY KEY,
+        userId    TEXT NOT NULL,
+        weekStart DATETIME NOT NULL,
+        dayOfWeek INTEGER NOT NULL,
+        recipeId  TEXT NOT NULL,
+        createdAt DATETIME NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+        CONSTRAINT MealPlanEntry_user_fkey   FOREIGN KEY (userId)   REFERENCES User(id)   ON DELETE CASCADE,
+        CONSTRAINT MealPlanEntry_recipe_fkey FOREIGN KEY (recipeId) REFERENCES Recipe(id) ON DELETE CASCADE,
+        UNIQUE (userId, weekStart, dayOfWeek)
+      )
+    `);
+    console.log("MealPlanEntry table ensured");
+  } catch (e) {
+    console.error("MealPlanEntry table:", e.message);
+  }
+
   console.log("Recipe columns migration done");
 }
 
