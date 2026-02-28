@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Pencil } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowRight, Pencil, Heart } from "lucide-react";
+import { toggleFavorite } from "@/app/actions/toggle-favorite";
 
 function getCategoryEmoji(category: string | null): string {
   const map: Record<string, string> = {
@@ -31,16 +33,60 @@ type Recipe = {
   ownerId?: string | null;
   ratingAverage?: number;
   ratingCount?: number;
+  isFavorite?: boolean;
 };
 
-export function RecipeCard({ recipe, index }: { recipe: Recipe; index: number }) {
+export function RecipeCard({
+  recipe,
+  index,
+  canFavorite = false,
+}: {
+  recipe: Recipe;
+  index: number;
+  canFavorite?: boolean;
+}) {
   const router = useRouter();
+  const [isFavorite, setIsFavorite] = useState(recipe.isFavorite ?? false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  useEffect(() => {
+    setIsFavorite(recipe.isFavorite ?? false);
+  }, [recipe.id, recipe.isFavorite]);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!canFavorite || isTogglingFavorite) return;
+    setIsTogglingFavorite(true);
+    const result = await toggleFavorite(recipe.id);
+    if (result.success) {
+      setIsFavorite(result.isFavorite);
+      router.refresh();
+    }
+    setIsTogglingFavorite(false);
+  };
+
   return (
     <article
       className={`group relative bg-warmwhite rounded-2xl overflow-hidden border border-espresso/5 shadow-sm
         transition-all duration-300 hover:-translate-y-2 hover:shadow-hover hover:border-terra/20 reveal`}
       style={{ transitionDelay: `${index * 50}ms` }}
     >
+      {/* Favorit (nur wenn eingeloggt) */}
+      {canFavorite && (
+        <button
+          type="button"
+          onClick={handleToggleFavorite}
+          disabled={isTogglingFavorite}
+          aria-label={isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
+          className={`absolute top-3 right-12 z-10 w-8 h-8 rounded-full backdrop-blur-sm border flex items-center justify-center transition-all duration-200 shadow-sm ${
+            isFavorite
+              ? "bg-terra/90 border-terra text-white hover:bg-terra"
+              : "bg-warmwhite/90 border-espresso/10 opacity-0 group-hover:opacity-100 hover:bg-terra/20 hover:border-terra/30 text-espresso"
+          }`}
+        >
+          <Heart size={14} fill={isFavorite ? "currentColor" : "none"} />
+        </button>
+      )}
       {/* Quick edit button */}
       <Link
         href={`/edit/${recipe.id}`}

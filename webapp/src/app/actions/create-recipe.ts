@@ -62,7 +62,9 @@ function extractRecipeJson(content: string): string | null {
   return jsonMatch ? jsonMatch[0] : null;
 }
 
-export async function createRecipe(formData: FormData): Promise<{ success: boolean; error?: string }> {
+export async function createRecipe(
+  formData: FormData
+): Promise<{ success: boolean; recipeCount?: number; error?: string }> {
   try {
     const apiKey = await getOpenAIApiKey();
     if (!apiKey) {
@@ -277,7 +279,8 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
       },
     });
 
-    return { success: true };
+    const recipeCount = userId ? await prisma.recipe.count({ where: { userId } }) : 0;
+    return { success: true, recipeCount: recipeCount > 0 ? recipeCount : undefined };
   } catch (err) {
     console.error("createRecipe error:", err);
     const msg = err instanceof Error ? err.message : "Unbekannter Fehler";

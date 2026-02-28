@@ -175,6 +175,7 @@ export default async function HomePage({ searchParams }: PageProps) {
     ownerId: r.userId ?? null,
     ratingAverage: ratingByRecipe.get(r.id)?.avg ?? 0,
     ratingCount: ratingByRecipe.get(r.id)?.count ?? 0,
+    isFavorite: userId ? favoriteRecipeIds.includes(r.id) : false,
   }));
 
   const sidebarRecipesWithMeta = (sidebarRecipes as RecipeWithUser[]).map((r) => ({
@@ -480,7 +481,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               <>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {recipesWithMeta.map((r, i) => (
-                    <RecipeCard key={r.id} recipe={r} index={i} />
+                    <RecipeCard key={r.id} recipe={r} index={i} canFavorite={!!userId} />
                   ))}
                 </div>
               </>

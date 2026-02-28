@@ -89,14 +89,18 @@ export default function AddRecipePage() {
       const result = await createRecipe(formData);
 
       if (result.success) {
-        setStatus("Rezept gespeichert!");
+        setStatus(
+          result.recipeCount != null
+            ? `Rezept gespeichert! 🎉 Das ist Rezept #${result.recipeCount} in deiner Sammlung.`
+            : "Rezept gespeichert!"
+        );
         setImage(null);
         setNoteText("");
         setAudioBlob(null);
         setTimeout(() => {
           router.push("/");
           router.refresh();
-        }, 1200);
+        }, result.recipeCount != null ? 2500 : 1200);
       } else {
         setError(result.error || "Fehler beim Speichern");
         setStatus("");
@@ -165,12 +169,11 @@ export default function AddRecipePage() {
                 className="max-h-36 object-contain rounded"
               />
             ) : (
-              <span className="text-espresso-light">📷 Foto aufnehmen oder auswählen</span>
+              <span className="text-espresso-light text-center px-2">📷 Kamera oder Bild aus Galerie</span>
             )}
             <input
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={handleImageCapture}
             />
