@@ -607,14 +607,14 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <h2 className="font-semibold text-stone-800 mb-2">Bild-API Key (z. B. Replicate / Nanobanana)</h2>
+                <h2 className="font-semibold text-stone-800 mb-2">Bild-API Key (z. B. Hugging Face hf_… / Replicate r8_…)</h2>
                 <p className="text-sm text-stone-600 mb-2">Zum Generieren von Rezeptbildern. Leer lassen = unverändert.</p>
                 {imageApiConfigured && <p className="text-sm text-green-600 mb-2">✓ Konfiguriert</p>}
                 <input
                   type="password"
                   value={imageApiKey}
                   onChange={(e) => setImageApiKey(e.target.value)}
-                  placeholder="r8_... oder anderer Key (leer = beibehalten)"
+                  placeholder="hf_... oder r8_... (leer = beibehalten)"
                   className="w-full px-4 py-2 rounded-lg border border-stone-200"
                 />
               </div>

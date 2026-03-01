@@ -1,9 +1,10 @@
+import { InferenceClient } from "@huggingface/inference";
 import { prisma } from "./prisma";
 
 const IMAGE_API_KEY = "image_api_key";
 const REPLICATE_FLUX = "black-forest-labs/flux-schnell";
-const HF_INFERENCE_SDXL =
-  "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0";
+const HF_MODEL = "stabilityai/stable-diffusion-xl-base-1.0";
+const HF_PROVIDER = "hf-inference" as const;
 const HF_RETRY_ATTEMPTS = 3;
 const HF_RETRY_DELAY_MS = 20_000;
 const FOOD_PROMPT_SUFFIX =
@@ -28,51 +29,46 @@ function isHuggingFaceKey(key: string): boolean {
 }
 
 /**
- * Generate an image via Hugging Face Inference (SDXL). Retries up to 3 times
- * with 20s delay on 503 (model loading). Returns image as Buffer or null on failure.
+ * Generate an image via Hugging Face Inference (router API, FLUX). Retries up to 3 times
+ * with 20s delay on 503 / model loading. Returns image as Buffer or null on failure.
  */
 export async function generateImageWithHuggingFace(
   prompt: string,
   apiKey: string
 ): Promise<Buffer | null> {
   const fullPrompt = prompt + FOOD_PROMPT_SUFFIX;
+  const client = new InferenceClient(apiKey.trim());
 
   for (let attempt = 1; attempt <= HF_RETRY_ATTEMPTS; attempt++) {
-    const res = await fetch(HF_INFERENCE_SDXL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey.trim()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: fullPrompt }),
-    });
-
-    if (res.status === 503) {
-      if (attempt < HF_RETRY_ATTEMPTS) {
+    try {
+      const blob = await client.textToImage({
+        model: HF_MODEL,
+        inputs: fullPrompt,
+        provider: HF_PROVIDER,
+      });
+      const blobLike = blob as unknown as { arrayBuffer?: () => Promise<ArrayBuffer> };
+      if (!blobLike?.arrayBuffer) {
+        console.error("Hugging Face did not return a blob");
+        return null;
+      }
+      const arrayBuffer = await blobLike.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const is503 =
+        msg.includes("503") ||
+        msg.includes("loading") ||
+        msg.includes("Loading");
+      if (is503 && attempt < HF_RETRY_ATTEMPTS) {
         console.warn(
-          `Hugging Face 503 (model loading), retry ${attempt}/${HF_RETRY_ATTEMPTS} in ${HF_RETRY_DELAY_MS / 1000}s`
+          `Hugging Face model loading, retry ${attempt}/${HF_RETRY_ATTEMPTS} in ${HF_RETRY_DELAY_MS / 1000}s`
         );
         await new Promise((r) => setTimeout(r, HF_RETRY_DELAY_MS));
         continue;
       }
-      console.error("Hugging Face still 503 after retries");
+      console.error("Hugging Face inference failed:", msg);
       return null;
     }
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("Hugging Face inference failed:", res.status, text);
-      return null;
-    }
-
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.startsWith("image/")) {
-      console.error("Hugging Face did not return an image:", contentType, await res.text());
-      return null;
-    }
-
-    const arrayBuffer = await res.arrayBuffer();
-    return Buffer.from(arrayBuffer);
   }
 
   return null;
