@@ -13,10 +13,12 @@ model User {
   password    String
   name        String?
   avatarPath  String?         // relativer Pfad zu /api/uploads (Profilbild)
-  role        String          @default("USER") // "USER" | "ADMIN"
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  recipes     Recipe[]
+  role                String          @default("USER") // "USER" | "ADMIN"
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  accountAccessUntil  DateTime?       // null = unbegrenzt
+  aiAccessUntil       DateTime?       // null = kein KI
+  recipes             Recipe[]
   ratings     Rating[]
   favorites   UserFavorite[]
   mealPlans   MealPlanEntry[]
@@ -28,6 +30,7 @@ model Recipe {
   imagePath       String?          // relativer Pfad zu /uploads
   ingredients     String           // JSON: [{ amount, unit, name }]
   steps           String           // JSON: string[]
+  servings        Int?             // Für X Personen (Standard 4)
   category        String?          // "backen" | "kochen"
   tags            String?          // JSON: ["vegan","schnell",...]
   mainIngredients String?          // JSON: ["lachs","brokkoli"]

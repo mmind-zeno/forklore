@@ -36,6 +36,11 @@ export async function updateRecipe(
     const visibilityInput = (formData.get("visibility") as string) || "";
     const mainIngredientsStr = formData.get("mainIngredients") as string;
     const imageFile = formData.get("image") as File | null;
+    const servingsRaw = formData.get("servings");
+    const servings =
+      servingsRaw != null && String(servingsRaw).trim() !== ""
+        ? Math.max(1, parseInt(String(servingsRaw), 10) || 4)
+        : existing.servings ?? 4;
 
     if (!title) {
       return { success: false, error: "Titel fehlt." };
@@ -117,6 +122,7 @@ export async function updateRecipe(
         imagePath,
         visibility: visibilityVal,
         mainIngredients: mainIngredientsVal,
+        servings,
       },
     });
 

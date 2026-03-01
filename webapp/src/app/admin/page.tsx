@@ -12,7 +12,27 @@ type User = {
   role: string;
   createdAt: string;
   recipeCount?: number;
+  accountAccessUntil?: string | null;
+  aiAccessUntil?: string | null;
 };
+
+function formatDateOrDash(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return "—";
+  }
+}
+
+function isoToDateInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
 
 export default function AdminPage() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
@@ -27,9 +47,17 @@ export default function AdminPage() {
   const [formName, setFormName] = useState("");
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<"USER" | "ADMIN">("USER");
+  const [formAccountAccessUntil, setFormAccountAccessUntil] = useState("");
+  const [formAiAccessUntil, setFormAiAccessUntil] = useState("");
   const [tab, setTab] = useState<"users" | "settings">("users");
   const [openaiKey, setOpenaiKey] = useState("");
   const [openaiConfigured, setOpenaiConfigured] = useState(false);
+  const [geminiKey, setGeminiKey] = useState("");
+  const [geminiConfigured, setGeminiConfigured] = useState(false);
+  const [imageApiKey, setImageApiKey] = useState("");
+  const [imageApiConfigured, setImageApiConfigured] = useState(false);
+  const [llmProvider, setLlmProvider] = useState<"openai" | "gemini">("openai");
+  const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash");
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState("");
 
@@ -129,6 +157,8 @@ export default function AdminPage() {
         name: formName || undefined,
         role: formRole,
         ...(formPassword ? { password: formPassword } : {}),
+        accountAccessUntil: formAccountAccessUntil.trim() || null,
+        aiAccessUntil: formAiAccessUntil.trim() || null,
       }),
     });
     const data = await res.json();
@@ -156,6 +186,8 @@ export default function AdminPage() {
     setFormName(u.name || "");
     setFormPassword("");
     setFormRole((u.role as "USER" | "ADMIN") || "USER");
+    setFormAccountAccessUntil(isoToDateInput(u.accountAccessUntil));
+    setFormAiAccessUntil(isoToDateInput(u.aiAccessUntil));
   };
 
   const loadSettings = async () => {
@@ -165,6 +197,10 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         setOpenaiConfigured(data.openaiConfigured ?? false);
+        setGeminiConfigured(data.geminiConfigured ?? false);
+        setImageApiConfigured(data.imageApiConfigured ?? false);
+        setLlmProvider(data.llmProvider === "gemini" ? "gemini" : "openai");
+        setGeminiModel(data.geminiModel || "gemini-2.5-flash");
       }
     } catch {
       setError("Settings konnten nicht geladen werden");
@@ -180,12 +216,20 @@ export default function AdminPage() {
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ openaiApiKey: openaiKey || "" }),
+      body: JSON.stringify({
+        ...(openaiKey.trim() ? { openaiApiKey: openaiKey.trim() } : {}),
+        ...(geminiKey.trim() ? { geminiApiKey: geminiKey.trim() } : {}),
+        ...(imageApiKey.trim() ? { imageApiKey: imageApiKey.trim() } : {}),
+        llmProvider,
+        geminiModel,
+      }),
     });
     const data = await res.json();
     if (res.ok) {
       setSettingsSaved(data.message || "Gespeichert");
       setOpenaiKey("");
+      setGeminiKey("");
+      setImageApiKey("");
       loadSettings();
     } else {
       setError(data.error || "Fehler");
@@ -328,6 +372,9 @@ export default function AdminPage() {
                   <p className="text-sm text-stone-500">
                     {u.name || "—"} · {u.role} · {u.recipeCount ?? 0} Rezepte
                   </p>
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    Zugang bis {formatDateOrDash(u.accountAccessUntil)} · KI bis {formatDateOrDash(u.aiAccessUntil)}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -460,6 +507,24 @@ export default function AdminPage() {
                   <option value="USER">USER</option>
                   <option value="ADMIN">ADMIN</option>
                 </select>
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">Zugang bis (leer = unbegrenzt)</label>
+                  <input
+                    type="date"
+                    value={formAccountAccessUntil}
+                    onChange={(e) => setFormAccountAccessUntil(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-stone-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">KI bis (leer = kein KI)</label>
+                  <input
+                    type="date"
+                    value={formAiAccessUntil}
+                    onChange={(e) => setFormAiAccessUntil(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-stone-200"
+                  />
+                </div>
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
@@ -483,28 +548,81 @@ export default function AdminPage() {
         )}
 
         {tab === "settings" && (
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-stone-100 max-w-lg">
-            <h2 className="font-semibold text-stone-800 mb-4">OpenAI API Key</h2>
-            {settingsLoading && <p className="text-sm text-stone-500 mb-2">Lade...</p>}
-            <p className="text-sm text-stone-600 mb-4">
-              API Key für Whisper und GPT-4o. Wird in der Datenbank gespeichert. Fallback: OPENAI_API_KEY aus .env
-            </p>
-            {openaiConfigured && (
-              <p className="text-sm text-green-600 mb-2">✓ API Key ist konfiguriert</p>
-            )}
-            <form onSubmit={handleSaveSettings} className="space-y-3">
-              <input
-                type="password"
-                value={openaiKey}
-                onChange={(e) => setOpenaiKey(e.target.value)}
-                placeholder="sk-... (leer = Key entfernen)"
-                className="w-full px-4 py-2 rounded-lg border border-stone-200"
-              />
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-stone-100 max-w-lg space-y-8">
+            {settingsLoading && <p className="text-sm text-stone-500">Lade...</p>}
+            <form onSubmit={handleSaveSettings} className="space-y-6">
+              <div>
+                <h2 className="font-semibold text-stone-800 mb-2">KI-Provider & Modell</h2>
+                <p className="text-sm text-stone-600 mb-3">Welcher Anbieter soll für Rezept-Extraktion und Einkaufsliste genutzt werden? Whisper (Sprache) nutzt weiterhin OpenAI.</p>
+                <div className="space-y-2">
+                  <label className="block text-xs text-stone-500">Provider</label>
+                  <select
+                    value={llmProvider}
+                    onChange={(e) => setLlmProvider(e.target.value as "openai" | "gemini")}
+                    className="w-full px-4 py-2 rounded-lg border border-stone-200"
+                  >
+                    <option value="openai">OpenAI (GPT-4o)</option>
+                    <option value="gemini">Google Gemini</option>
+                  </select>
+                  {llmProvider === "gemini" && (
+                    <>
+                      <label className="block text-xs text-stone-500 mt-2">Gemini-Modell (drei neueste + Gemini 3)</label>
+                      <select
+                        value={geminiModel}
+                        onChange={(e) => setGeminiModel(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border border-stone-200"
+                      >
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                        <option value="gemini-3-pro-preview">Gemini 3 Pro (Preview)</option>
+                        <option value="gemini-3-flash-preview">Gemini 3 Flash (Preview)</option>
+                      </select>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div>
+                <h2 className="font-semibold text-stone-800 mb-2">OpenAI API Key</h2>
+                <p className="text-sm text-stone-600 mb-2">Für Whisper (Sprache) und optional GPT-4o. Leer lassen = unverändert.</p>
+                {openaiConfigured && <p className="text-sm text-green-600 mb-2">✓ Konfiguriert</p>}
+                <input
+                  type="password"
+                  value={openaiKey}
+                  onChange={(e) => setOpenaiKey(e.target.value)}
+                  placeholder="sk-... (leer = beibehalten)"
+                  className="w-full px-4 py-2 rounded-lg border border-stone-200"
+                />
+              </div>
+              <div>
+                <h2 className="font-semibold text-stone-800 mb-2">Gemini API Key</h2>
+                <p className="text-sm text-stone-600 mb-2">Für Google Gemini (wenn Provider = Gemini). Leer lassen = unverändert.</p>
+                {geminiConfigured && <p className="text-sm text-green-600 mb-2">✓ Konfiguriert</p>}
+                <input
+                  type="password"
+                  value={geminiKey}
+                  onChange={(e) => setGeminiKey(e.target.value)}
+                  placeholder="AIza... (leer = beibehalten)"
+                  className="w-full px-4 py-2 rounded-lg border border-stone-200"
+                />
+              </div>
+              <div>
+                <h2 className="font-semibold text-stone-800 mb-2">Bild-API Key (z. B. Replicate / Nanobanana)</h2>
+                <p className="text-sm text-stone-600 mb-2">Zum Generieren von Rezeptbildern. Leer lassen = unverändert.</p>
+                {imageApiConfigured && <p className="text-sm text-green-600 mb-2">✓ Konfiguriert</p>}
+                <input
+                  type="password"
+                  value={imageApiKey}
+                  onChange={(e) => setImageApiKey(e.target.value)}
+                  placeholder="r8_... oder anderer Key (leer = beibehalten)"
+                  className="w-full px-4 py-2 rounded-lg border border-stone-200"
+                />
+              </div>
               <button
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600"
               >
-                Speichern
+                Einstellungen speichern
               </button>
             </form>
           </div>

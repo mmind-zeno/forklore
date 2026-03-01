@@ -4,7 +4,8 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { updateRecipe } from "@/app/actions/update-recipe";
 import { deleteRecipe } from "@/app/actions/delete-recipe";
-import { Pencil, Trash2, Plus, X, Loader2 } from "lucide-react";
+import { generateRecipeImage } from "@/app/actions/generate-recipe-image";
+import { Pencil, Trash2, Plus, X, Loader2, Sparkles } from "lucide-react";
 
 type Ingredient = { amount?: string; unit?: string; name: string };
 
@@ -18,6 +19,7 @@ type Props = {
   initialImagePath: string | null;
   initialVisibility: string | null;
   initialMainIngredients?: string;
+  initialServings?: number;
 };
 
 export function EditRecipeForm({
@@ -30,12 +32,14 @@ export function EditRecipeForm({
   initialImagePath,
   initialVisibility,
   initialMainIngredients,
+  initialServings = 4,
 }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
   const [ingredients, setIngredients] = useState<Ingredient[]>(initialIngredients);
   const [steps, setSteps] = useState(initialSteps);
   const [category, setCategory] = useState(initialCategory || "");
+  const [servings, setServings] = useState(initialServings);
   const [tags, setTags] = useState(initialTags.join(", "));
   const [image, setImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -48,6 +52,7 @@ export function EditRecipeForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addIngredient = () => {
@@ -87,6 +92,24 @@ export function EditRecipeForm({
     reader.readAsDataURL(file);
   };
 
+  const handleGenerateImage = async () => {
+    setError("");
+    setIsGeneratingImage(true);
+    const result = await generateRecipeImage({
+      recipeId,
+      title: title.trim(),
+      mainIngredients: mainIngredientsText.trim() || undefined,
+    });
+    setIsGeneratingImage(false);
+    if (result.success && result.imagePath) {
+      setImage(`/api/uploads/${result.imagePath}`);
+      setStatus("Bild generiert. Speichern nicht vergessen.");
+      router.refresh();
+    } else {
+      setError(result.error || "Bildgenerierung fehlgeschlagen.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -98,6 +121,7 @@ export function EditRecipeForm({
     formData.append("ingredients", JSON.stringify(ingredients));
     formData.append("steps", JSON.stringify(steps));
     formData.append("category", category || "");
+    formData.append("servings", String(Math.max(1, servings)));
     formData.append("visibility", visibility);
     const tagList = tags
       .split(",")
@@ -164,6 +188,18 @@ export function EditRecipeForm({
           <option value="backen">Backen</option>
           <option value="kochen">Kochen</option>
         </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-espresso mb-2">Für X Personen</label>
+        <input
+          type="number"
+          min={1}
+          max={24}
+          value={servings}
+          onChange={(e) => setServings(Math.max(1, parseInt(e.target.value, 10) || 4))}
+          className="w-full p-4 rounded-xl border-2 border-espresso/10 bg-warmwhite focus:border-terra focus:ring-2 focus:ring-terra/20 outline-none transition"
+        />
       </div>
 
       <div>
@@ -337,6 +373,15 @@ export function EditRecipeForm({
               />
             </label>
           </div>
+          <button
+            type="button"
+            onClick={handleGenerateImage}
+            disabled={isGeneratingImage || !title.trim()}
+            className="inline-flex items-center gap-2 rounded-xl border-2 border-terra/40 bg-terra/5 px-4 py-3 text-terra text-sm font-bold hover:bg-terra/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingImage ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+            {isGeneratingImage ? "Generiere …" : "Bild mit KI generieren"}
+          </button>
         </div>
       </div>
 

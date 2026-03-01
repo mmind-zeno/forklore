@@ -21,6 +21,8 @@ export async function GET(
       name: true,
       role: true,
       createdAt: true,
+      accountAccessUntil: true,
+      aiAccessUntil: true,
       _count: { select: { recipes: true } },
     },
   });
@@ -44,13 +46,15 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { email, name, role, password } = body;
+  const { email, name, role, password, accountAccessUntil, aiAccessUntil } = body;
 
   const updateData: {
     email?: string;
     name?: string | null;
     role?: string;
     password?: string;
+    accountAccessUntil?: Date | null;
+    aiAccessUntil?: Date | null;
   } = {};
 
   if (typeof email === "string" && email.trim()) {
@@ -65,6 +69,16 @@ export async function PUT(
   if (typeof password === "string" && password.length >= 8) {
     updateData.password = await bcrypt.hash(password, 12);
   }
+  if (accountAccessUntil !== undefined) {
+    updateData.accountAccessUntil =
+      accountAccessUntil === null || accountAccessUntil === ""
+        ? null
+        : new Date(accountAccessUntil);
+  }
+  if (aiAccessUntil !== undefined) {
+    updateData.aiAccessUntil =
+      aiAccessUntil === null || aiAccessUntil === "" ? null : new Date(aiAccessUntil);
+  }
 
   try {
     const user = await prisma.user.update({
@@ -76,6 +90,8 @@ export async function PUT(
         name: true,
         role: true,
         createdAt: true,
+        accountAccessUntil: true,
+        aiAccessUntil: true,
       },
     });
     return NextResponse.json({ user, message: "User aktualisiert" });

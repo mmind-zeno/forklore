@@ -1,10 +1,10 @@
 "use server";
 
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { getOpenAIClient, getOpenAIApiKey } from "@/lib/openai";
+import { getLlmProvider, getGeminiApiKey, chatCompletion } from "@/lib/llm";
 import { resizeImageForRecipe } from "@/lib/image-resize";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
@@ -15,37 +15,6 @@ export type RecipeInput = {
   steps: string[];
   category?: "backen" | "kochen";
   tags?: string[];
-};
-
-const RECIPE_JSON_SCHEMA = {
-  type: "object" as const,
-  properties: {
-    title: { type: "string" as const },
-    ingredients: {
-      type: "array" as const,
-      items: {
-        type: "object" as const,
-        properties: {
-          amount: { type: "string" as const },
-          unit: { type: "string" as const },
-          name: { type: "string" as const },
-        },
-        required: ["amount", "unit", "name"] as const,
-        additionalProperties: false,
-      },
-    },
-    steps: {
-      type: "array" as const,
-      items: { type: "string" as const },
-    },
-    category: { type: "string" as const, enum: ["backen", "kochen", ""] },
-    tags: {
-      type: "array" as const,
-      items: { type: "string" as const },
-    },
-  },
-  required: ["title", "ingredients", "steps", "category", "tags"] as const,
-  additionalProperties: false,
 };
 
 function extractRecipeJson(content: string): string | null {
@@ -66,13 +35,29 @@ export async function createRecipe(
   formData: FormData
 ): Promise<{ success: boolean; recipeCount?: number; error?: string }> {
   try {
-    const apiKey = await getOpenAIApiKey();
-    if (!apiKey) {
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      const until = session.user.aiAccessUntil;
+      if (until == null || new Date(until) <= new Date()) {
+        return { success: false, error: "KI-Zugang nicht aktiv. Bitte Admin kontaktieren." };
+      }
+    }
+    const provider = await getLlmProvider();
+    const openaiApiKey = await getOpenAIApiKey();
+    const geminiApiKey = provider === "gemini" ? await getGeminiApiKey() : null;
+    if (provider === "openai" && !openaiApiKey) {
       return { success: false, error: "OpenAI API Key nicht konfiguriert. Bitte in Admin → Settings hinterlegen." };
+    }
+    if (provider === "gemini" && !geminiApiKey) {
+      return { success: false, error: "Gemini API Key nicht konfiguriert. Bitte in Admin → Settings hinterlegen." };
+    }
+
+    const mode = (formData.get("mode") as string) || "mic";
+    if (mode === "mic" && !openaiApiKey) {
+      return { success: false, error: "OpenAI API Key für Whisper (Sprache) erforderlich. Bitte in Admin → Settings hinterlegen." };
     }
 
     const openai = await getOpenAIClient();
-    const mode = (formData.get("mode") as string) || "mic";
     const imageFile = formData.get("image") as File | null;
     const audioFile = formData.get("audio") as File | null;
     const noteText = (formData.get("text") as string) || "";
@@ -86,10 +71,7 @@ export async function createRecipe(
         return { success: false, error: "Bitte Rezept-Notiz eingeben." };
       }
 
-      const messages: ChatCompletionMessageParam[] = [
-        {
-          role: "system",
-          content: `Du bist ein Koch-Assistent. Extrahiere aus dem folgenden Rezept-Text ein strukturiertes Rezept.
+      const systemPrompt = `Du bist ein Koch-Assistent. Extrahiere aus dem folgenden Rezept-Text ein strukturiertes Rezept.
 Antworte NUR mit einem JSON-Objekt in diesem Format:
 {"title":"Rezeptname","ingredients":[{"amount":"Menge","unit":"Einheit","name":"Zutat"}],"steps":["Schritt 1","Schritt 2"],"category":"backen oder kochen","tags":["vegan","schnell"]}
 - category: "backen" für Kuchen, Kekse, Brot, Teig; "kochen" für Suppen, Hauptgerichte, Salate.
@@ -97,55 +79,31 @@ Antworte NUR mit einem JSON-Objekt in diesem Format:
 - Für amount und unit: leere Zeichenkette "" verwenden, wenn keine Angabe möglich ist.
 - Für category: "" verwenden wenn unklar; sonst "backen" oder "kochen".
 - Für tags: leeres Array [] wenn keine Tags zutreffen.
-Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
-        },
-      ];
+Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch. Antworte ausschließlich mit dem JSON-Objekt, kein anderer Text.`;
 
       let resizedImage: { buffer: Buffer; mimeType: string; ext: string } | null = null;
       if (imageFile?.size) {
         const rawBuffer = Buffer.from(await imageFile.arrayBuffer());
         const mime = imageFile.type || "image/jpeg";
         resizedImage = await resizeImageForRecipe(rawBuffer, mime);
-        messages.push({
-          role: "user",
-          content: [
-            { type: "text", text: `Rezept-Notiz:\n${noteText.trim()}` },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${resizedImage.mimeType};base64,${resizedImage.buffer.toString("base64")}`,
-                detail: "low",
-              },
-            },
-          ],
-        });
-      } else {
-        messages.push({
-          role: "user",
-          content: `Rezept-Notiz:\n${noteText.trim()}`,
-        });
       }
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages,
-        max_tokens: 1536,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "recipe",
-            strict: true,
-            schema: RECIPE_JSON_SCHEMA,
-          },
-        },
-      });
-
-      const content = completion.choices[0]?.message?.content?.trim();
-      if (!content) {
-        const refusal = completion.choices[0]?.message?.refusal;
-        if (refusal) {
-          return { success: false, error: "Die KI konnte das Rezept nicht extrahieren. Bitte Bild und Text prüfen." };
-        }
+      let content: string;
+      try {
+        content = await chatCompletion({
+          systemPrompt,
+          userMessage: `Rezept-Notiz:\n${noteText.trim()}`,
+          ...(resizedImage
+            ? { imageBase64: resizedImage.buffer.toString("base64"), imageMimeType: resizedImage.mimeType }
+            : {}),
+        });
+      } catch (e) {
+        return {
+          success: false,
+          error: e instanceof Error ? e.message : "Keine Antwort von der KI",
+        };
+      }
+      if (!content?.trim()) {
         return { success: false, error: "Keine Antwort von der KI" };
       }
 
@@ -187,12 +145,7 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
       const mime = imageFile.type || "image/jpeg";
       const { buffer: imageBuffer, mimeType: imageType, ext: imageExt } = await resizeImageForRecipe(rawImageBuffer, mime);
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `Du bist ein Koch-Assistent. Extrahiere aus dem Bild und dem gesprochenen Text ein strukturiertes Rezept.
+      const systemPromptMic = `Du bist ein Koch-Assistent. Extrahiere aus dem Bild und dem gesprochenen Text ein strukturiertes Rezept.
 Antworte NUR mit einem JSON-Objekt in diesem Format:
 {"title":"Rezeptname","ingredients":[{"amount":"Menge","unit":"Einheit","name":"Zutat"}],"steps":["Schritt 1","Schritt 2"],"category":"backen oder kochen","tags":["vegan","schnell"]}
 - category: "backen" für Kuchen, Kekse, Brot; "kochen" für Suppen, Hauptgerichte.
@@ -200,39 +153,23 @@ Antworte NUR mit einem JSON-Objekt in diesem Format:
 - Für amount und unit: leere Zeichenkette "" verwenden, wenn keine Angabe möglich ist.
 - Für category: "" verwenden wenn unklar; sonst "backen" oder "kochen".
 - Für tags: leeres Array [] wenn keine Tags zutreffen.
-Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: `Gesprochener Text:\n${transcript}` },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${imageType};base64,${imageBuffer.toString("base64")}`,
-                  detail: "low",
-                },
-              },
-            ],
-          },
-        ],
-        max_tokens: 1536,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "recipe",
-            strict: true,
-            schema: RECIPE_JSON_SCHEMA,
-          },
-        },
-      });
+Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch. Antworte ausschließlich mit dem JSON-Objekt, kein anderer Text.`;
 
-      const content = completion.choices[0]?.message?.content?.trim();
-      if (!content) {
-        const refusal = completion.choices[0]?.message?.refusal;
-        if (refusal) {
-          return { success: false, error: "Die KI konnte das Rezept nicht extrahieren. Bitte Bild und Aufnahme prüfen." };
-        }
+      let content: string;
+      try {
+        content = await chatCompletion({
+          systemPrompt: systemPromptMic,
+          userMessage: `Gesprochener Text:\n${transcript}`,
+          imageBase64: imageBuffer.toString("base64"),
+          imageMimeType: imageType,
+        });
+      } catch (e) {
+        return {
+          success: false,
+          error: e instanceof Error ? e.message : "Die KI konnte das Rezept nicht extrahieren. Bitte Bild und Aufnahme prüfen.",
+        };
+      }
+      if (!content?.trim()) {
         return { success: false, error: "Keine Antwort von der KI" };
       }
 
@@ -261,11 +198,15 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
       return { success: false, error: "Ungültiges Rezept-Format" };
     }
 
-    const session = await getServerSession(authOptions);
     const userId = session?.user?.id ?? null;
 
     const category = recipe.category === "backen" || recipe.category === "kochen" ? recipe.category : null;
     const tags = Array.isArray(recipe.tags) && recipe.tags.length > 0 ? JSON.stringify(recipe.tags) : null;
+    const servingsRaw = formData.get("servings");
+    const servings =
+      servingsRaw != null && String(servingsRaw).trim() !== ""
+        ? Math.max(1, parseInt(String(servingsRaw), 10) || 4)
+        : 4;
 
     await prisma.recipe.create({
       data: {
@@ -276,6 +217,7 @@ Schätze fehlende Mengen mit "ca." wenn nötig. Alle Texte auf Deutsch.`,
         category,
         tags,
         userId,
+        servings,
       },
     });
 

@@ -1,18 +1,14 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const LOGIN_TIMEOUT_MS = 20000;
-
-function LoginForm() {
+export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,28 +17,21 @@ function LoginForm() {
     setError("");
     setLoading(true);
     try {
-      const signInPromise = signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password, name: name.trim() || undefined }),
       });
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), LOGIN_TIMEOUT_MS)
-      );
-      const res = await Promise.race([signInPromise, timeoutPromise]);
-      if (res?.error) {
-        setError("Ungültige E-Mail oder Passwort.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Registrierung fehlgeschlagen.");
         setLoading(false);
         return;
       }
-      router.push(callbackUrl);
+      router.push("/login?registered=1");
       router.refresh();
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message === "TIMEOUT"
-          ? "Die Anmeldung dauert zu lange. Bitte erneut versuchen."
-          : "Ein Fehler ist aufgetreten."
-      );
+    } catch {
+      setError("Ein Fehler ist aufgetreten.");
       setLoading(false);
     }
   }
@@ -58,9 +47,9 @@ function LoginForm() {
           </Link>
         </div>
         <div className="bg-warmwhite rounded-2xl border border-espresso/6 shadow-card p-8">
-          <h1 className="font-display text-2xl font-bold text-espresso mb-2">Anmelden</h1>
+          <h1 className="font-display text-2xl font-bold text-espresso mb-2">Registrieren</h1>
           <p className="text-espresso-mid text-sm mb-6">
-            Melde dich an, um deine Rezepte zu verwalten.
+            Erstelle ein Konto und erhalte 10 Tage Zugang zur App (ohne KI-Funktionen). Ein Admin kann dir später KI-Zugang einrichten.
           </p>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -80,7 +69,7 @@ function LoginForm() {
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-bold text-espresso mb-1.5">
-                Passwort
+                Passwort (min. 8 Zeichen)
               </label>
               <input
                 id="password"
@@ -88,9 +77,24 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete="current-password"
+                minLength={8}
+                autoComplete="new-password"
                 className="w-full px-4 py-2.5 rounded-xl border-2 border-espresso/10 bg-cream text-espresso placeholder:text-espresso-light focus:outline-none focus:ring-2 focus:ring-terra/20 focus:border-terra transition"
                 placeholder="••••••••"
+              />
+            </div>
+            <div>
+              <label htmlFor="name" className="block text-sm font-bold text-espresso mb-1.5">
+                Name (optional)
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                className="w-full px-4 py-2.5 rounded-xl border-2 border-espresso/10 bg-cream text-espresso placeholder:text-espresso-light focus:outline-none focus:ring-2 focus:ring-terra/20 focus:border-terra transition"
+                placeholder="Dein Name"
               />
             </div>
             {error && (
@@ -103,25 +107,17 @@ function LoginForm() {
               disabled={loading}
               className="w-full py-3 px-4 bg-gradient-cta text-white rounded-xl font-bold shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {loading ? "Wird angemeldet…" : "Anmelden"}
+              {loading ? "Wird erstellt…" : "Konto erstellen"}
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-espresso-mid">
-            Noch kein Konto?{" "}
-            <Link href="/register" className="font-bold text-terra hover:underline">
-              Jetzt registrieren
+            Bereits ein Konto?{" "}
+            <Link href="/login" className="font-bold text-terra hover:underline">
+              Jetzt anmelden
             </Link>
           </p>
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-cream">Laden…</div>}>
-      <LoginForm />
-    </Suspense>
   );
 }

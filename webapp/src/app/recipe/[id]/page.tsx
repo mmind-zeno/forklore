@@ -85,6 +85,8 @@ export default async function RecipePage({
     steps = ["Schritte konnten nicht geladen werden."];
   }
 
+  const servings = recipe.servings ?? 4;
+
   return (
     <RecipeDetail
       recipeId={id}
@@ -95,6 +97,7 @@ export default async function RecipePage({
       tags={tags}
       category={recipe.category}
       visibility={recipe.visibility}
+      servings={servings}
       ratingAverage={ratingAverage}
       ratingCount={ratingCount}
       initialUserRating={viewerStars}

@@ -17,6 +17,7 @@ export default function AddRecipePage() {
   const [noteText, setNoteText] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [servings, setServings] = useState(4);
   const [status, setStatus] = useState<string>("");
   const [error, setError] = useState<string>("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -85,6 +86,7 @@ export default function AddRecipePage() {
         formData.append("image", imageBlob, "image.jpg");
         formData.append("audio", audioBlob!, "audio.webm");
       }
+      formData.append("servings", String(Math.max(1, servings)));
 
       const result = await createRecipe(formData);
 
@@ -127,6 +129,18 @@ export default function AddRecipePage() {
           Notiz schreiben oder per Mikrofon sprechen – die KI extrahiert Zutaten und Schritte.
         </p>
       </header>
+
+      <div className="mb-6">
+        <label className="block text-sm font-bold text-espresso mb-1.5">Für X Personen (Mengen im Rezept)</label>
+        <input
+          type="number"
+          min={1}
+          max={24}
+          value={servings}
+          onChange={(e) => setServings(Math.max(1, parseInt(e.target.value, 10) || 4))}
+          className="w-24 px-3 py-2 rounded-xl border-2 border-espresso/10 bg-warmwhite focus:border-terra focus:ring-2 focus:ring-terra/20 outline-none transition"
+        />
+      </div>
 
       {/* Mode Tabs */}
       <div className="flex gap-2 mb-6 p-1.5 bg-warmwhite rounded-xl border border-espresso/10">

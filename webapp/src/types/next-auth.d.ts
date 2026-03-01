@@ -15,6 +15,8 @@ declare module "next-auth" {
       name?: string | null;
       role?: string;
       image?: string | null;
+      accountAccessUntil?: string | null;
+      aiAccessUntil?: string | null;
     };
   }
 }
@@ -24,5 +26,7 @@ declare module "next-auth/jwt" {
     id?: string;
     email?: string;
     role?: string;
+    accountAccessUntil?: string | null;
+    aiAccessUntil?: string | null;
   }
 }

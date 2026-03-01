@@ -140,6 +140,32 @@ async function main() {
     console.error("UserFavorite table:", e.message);
   }
 
+  const addUserColumn = async (name, sql) => {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+      console.log(`User.${name} column added`);
+    } catch (e) {
+      if (e.message && e.message.includes("duplicate column name")) {
+        console.log(`User.${name} already exists`);
+      } else {
+        console.error(`User.${name}:`, e.message);
+      }
+    }
+  };
+  await addUserColumn("accountAccessUntil", "ALTER TABLE User ADD COLUMN accountAccessUntil DATETIME");
+  await addUserColumn("aiAccessUntil", "ALTER TABLE User ADD COLUMN aiAccessUntil DATETIME");
+
+  try {
+    await prisma.$executeRawUnsafe("ALTER TABLE Recipe ADD COLUMN servings INTEGER");
+    console.log("Recipe.servings column added");
+  } catch (e) {
+    if (e.message && e.message.includes("duplicate column name")) {
+      console.log("Recipe.servings already exists");
+    } else {
+      console.error("Recipe.servings:", e.message);
+    }
+  }
+
   try {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS MealPlanEntry (

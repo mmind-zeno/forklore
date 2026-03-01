@@ -18,6 +18,8 @@ export async function GET() {
         name: true,
         role: true,
         createdAt: true,
+        accountAccessUntil: true,
+        aiAccessUntil: true,
         _count: { select: { recipes: true } },
       },
     });

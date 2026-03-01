@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Calendar, Sparkles } from "lucide-react";
 import { getMealPlan } from "@/app/actions/get-meal-plan";
 import { setMealPlanEntry } from "@/app/actions/set-meal-plan-entry";
@@ -44,6 +45,10 @@ export function PlanWeek({
   recipes: { id: string; title: string }[];
 }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const canUseAI = Boolean(
+    session?.user?.aiAccessUntil && new Date(session.user.aiAccessUntil) > new Date()
+  );
   const [weekStart, setWeekStart] = useState(initialWeekStart);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,7 +229,7 @@ export function PlanWeek({
               )}
               {loadingList ? "Wird erstellt …" : "Einkaufsliste anzeigen"}
             </button>
-            {showShoppingList && shoppingItems.length > 0 && (
+            {showShoppingList && shoppingItems.length > 0 && canUseAI && (
               <button
                 type="button"
                 onClick={handleOptimizeWithAI}

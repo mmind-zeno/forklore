@@ -29,6 +29,8 @@ type RecipeDetailProps = {
   relatedRecipes?: RelatedRecipe[];
   currentId?: string;
   visibility?: string | null;
+  /** Für X Personen (Standard 4); Mengen werden danach skaliert. */
+  servings?: number;
   ratingAverage?: number;
   ratingCount?: number;
   initialUserRating?: number;
@@ -45,6 +47,19 @@ function getCategoryLabel(cat: string | null): string {
   return cat;
 }
 
+const PERSON_OPTIONS = [2, 4, 6, 8];
+
+function scaleAmount(amountStr: string | undefined, baseServings: number, selectedPersons: number): string {
+  if (baseServings <= 0 || selectedPersons <= 0) return amountStr ?? "";
+  if (!amountStr?.trim()) return "";
+  const num = parseFloat(amountStr.replace(",", "."));
+  if (Number.isNaN(num)) return amountStr;
+  const scaled = (num * selectedPersons) / baseServings;
+  if (Number.isInteger(scaled)) return String(scaled);
+  const rounded = Math.round(scaled * 10) / 10;
+  return rounded % 1 === 0 ? String(rounded) : rounded.toFixed(1);
+}
+
 export function RecipeDetail({
   recipeId,
   title,
@@ -56,6 +71,7 @@ export function RecipeDetail({
   relatedRecipes = [],
   currentId,
   visibility,
+  servings: baseServings = 4,
   ratingAverage = 0,
   ratingCount = 0,
   initialUserRating = 0,
@@ -67,6 +83,8 @@ export function RecipeDetail({
   const tagList = Array.isArray(tags) ? tags : [];
   const isVegan = tagList.some((t) => t.toLowerCase() === "vegan");
   const router = useRouter();
+  const personOptions = PERSON_OPTIONS.includes(baseServings) ? PERSON_OPTIONS : [baseServings, ...PERSON_OPTIONS].sort((a, b) => a - b);
+  const [selectedPersons, setSelectedPersons] = useState(baseServings);
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -303,20 +321,45 @@ export function RecipeDetail({
               transition={{ delay: 0.3 }}
               className="bg-sage/10 rounded-2xl p-6 border border-sage/20"
             >
-              <h2 className="font-display text-lg font-bold text-sage-dark mb-4 flex items-center gap-2">
-                <span>▸</span> Zutaten
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 className="font-display text-lg font-bold text-sage-dark flex items-center gap-2">
+                  <span>▸</span> Zutaten
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-espresso-mid font-medium">Mengen für:</span>
+                  <div className="flex rounded-xl border border-sage/30 overflow-hidden">
+                    {personOptions.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setSelectedPersons(n)}
+                        className={`px-3 py-1.5 text-sm font-bold transition-colors ${
+                          selectedPersons === n
+                            ? "bg-sage text-white"
+                            : "bg-sage/5 text-sage-dark hover:bg-sage/15"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-sm text-espresso-mid">Personen</span>
+                </div>
+              </div>
               <ul className="space-y-2 text-espresso-mid">
-                {ingredients.map((i, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-sage">•</span>
-                    <span>
-                      {i.amount && `${i.amount} `}
-                      {i.unit && `${i.unit} `}
-                      {i.name}
-                    </span>
-                  </li>
-                ))}
+                {ingredients.map((i, idx) => {
+                  const scaledAmount = scaleAmount(i.amount, baseServings, selectedPersons);
+                  return (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-sage">•</span>
+                      <span>
+                        {scaledAmount && `${scaledAmount} `}
+                        {i.unit && `${i.unit} `}
+                        {i.name}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </motion.section>
 

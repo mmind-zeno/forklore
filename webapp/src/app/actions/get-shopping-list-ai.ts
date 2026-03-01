@@ -3,7 +3,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getShoppingList } from "./get-shopping-list";
-import { getOpenAIClient, getOpenAIApiKey } from "@/lib/openai";
+import { getLlmProvider, getGeminiApiKey, chatCompletion } from "@/lib/llm";
+import { getOpenAIApiKey } from "@/lib/openai";
 
 const CATEGORIES = [
   "Gemüse & Salat",
@@ -14,35 +15,6 @@ const CATEGORIES = [
   "Gewürze & Öle",
   "Sonstiges",
 ] as const;
-
-const SHOPPING_LIST_SCHEMA = {
-  type: "object" as const,
-  properties: {
-    items: {
-      type: "array" as const,
-      items: {
-        type: "object" as const,
-        properties: {
-          name: { type: "string" as const },
-          amount: { type: "string" as const },
-          unit: { type: "string" as const },
-          recipes: {
-            type: "array" as const,
-            items: { type: "string" as const },
-          },
-          category: {
-            type: "string" as const,
-            enum: [...CATEGORIES],
-          },
-        },
-        required: ["name", "amount", "unit", "recipes", "category"] as const,
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["items"] as const,
-  additionalProperties: false,
-};
 
 export type ShoppingItemAI = {
   name: string;
@@ -63,10 +35,19 @@ export async function getShoppingListWithAI(weekStart: string): Promise<{
     if (!session?.user?.id) {
       return { success: false, error: "Nicht angemeldet." };
     }
+    const aiUntil = session.user.aiAccessUntil;
+    if (aiUntil == null || new Date(aiUntil) <= new Date()) {
+      return { success: false, error: "KI-Zugang nicht aktiv. Bitte Admin kontaktieren." };
+    }
 
-    const apiKey = await getOpenAIApiKey();
-    if (!apiKey) {
+    const provider = await getLlmProvider();
+    const openaiApiKey = await getOpenAIApiKey();
+    const geminiApiKey = provider === "gemini" ? await getGeminiApiKey() : null;
+    if (provider === "openai" && !openaiApiKey) {
       return { success: false, error: "OpenAI API Key nicht konfiguriert. Bitte in Admin → Settings hinterlegen." };
+    }
+    if (provider === "gemini" && !geminiApiKey) {
+      return { success: false, error: "Gemini API Key nicht konfiguriert. Bitte in Admin → Settings hinterlegen." };
     }
 
     const listRes = await getShoppingList(weekStart);
@@ -81,13 +62,7 @@ export async function getShoppingListWithAI(weekStart: string): Promise<{
       recipes: i.recipes,
     }));
 
-    const openai = await getOpenAIClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `Du bist ein Assistent für Einkaufslisten. Du erhältst eine rohe Einkaufsliste aus mehreren Rezepten.
+    const systemPrompt = `Du bist ein Assistent für Einkaufslisten. Du erhältst eine rohe Einkaufsliste aus mehreren Rezepten.
 Deine Aufgabe:
 1. Gleiche oder sehr ähnliche Zutaten zusammenführen (z. B. "Edamame" und "Edamame 50g" → eine Zeile "Edamame 50g"; "Buchweizenmehl" und "Buchweizenmehl" mit verschiedenen Mengen → eine Zeile mit summierter Menge).
 2. Mengen addieren, wenn gleiche Einheit (g, ml, TL, EL, Prise, Stück).
@@ -95,32 +70,30 @@ Deine Aufgabe:
 4. Jeder Eintrag braucht: name (kurz, singular), amount (Zahl oder "nach Bedarf"), unit, recipes (Array der Rezeptnamen), category.
 5. category muss genau eine sein von: ${CATEGORIES.join(", ")}.
 6. Sortiere die items zuerst nach category (Reihenfolge wie oben), dann nach name alphabetisch.
-Antworte NUR mit dem JSON-Objekt (kein anderer Text).`,
-        },
-        {
-          role: "user",
-          content: `Rohe Einkaufsliste (JSON):\n${JSON.stringify(rawList, null, 0)}`,
-        },
-      ],
-      max_tokens: 4096,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "shopping_list",
-          strict: true,
-          schema: SHOPPING_LIST_SCHEMA,
-        },
-      },
-    });
+Antworte NUR mit einem JSON-Objekt im Format {"items": [{"name":"...","amount":"...","unit":"...","recipes":["..."],"category":"..."}]} (kein anderer Text).`;
 
-    const content = completion.choices[0]?.message?.content?.trim();
+    let content: string;
+    try {
+      content = await chatCompletion({
+        systemPrompt,
+        userMessage: `Rohe Einkaufsliste (JSON):\n${JSON.stringify(rawList, null, 0)}`,
+      });
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : "KI konnte Liste nicht erstellen. Bitte Standardliste nutzen.",
+      };
+    }
+    content = content?.trim() ?? "";
     if (!content) {
       return { success: false, error: "KI konnte Liste nicht erstellen. Bitte Standardliste nutzen." };
     }
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : content;
 
     let parsed: { items: ShoppingItemAI[] };
     try {
-      parsed = JSON.parse(content) as { items: ShoppingItemAI[] };
+      parsed = JSON.parse(jsonStr) as { items: ShoppingItemAI[] };
     } catch {
       return { success: false, error: "Ungültige KI-Antwort. Bitte Standardliste nutzen." };
     }

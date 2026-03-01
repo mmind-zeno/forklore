@@ -75,6 +75,7 @@ export default async function EditRecipePage({
           initialImagePath={recipe.imagePath}
           initialVisibility={recipe.visibility}
           initialMainIngredients={mainIngredientsText}
+          initialServings={recipe.servings ?? 4}
         />
       </main>
     </div>
