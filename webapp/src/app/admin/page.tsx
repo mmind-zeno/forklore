@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { VERSION } from "@/lib/version";
 
 type User = {
   id: string;
@@ -212,7 +213,7 @@ export default function AdminPage() {
           className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm"
         >
           <h1 className="text-xl font-bold text-stone-800 mb-2">Admin Login</h1>
-          <p className="text-sm text-stone-600 mb-6">Forklore v0.5.0</p>
+          <p className="text-sm text-stone-600 mb-6">Forklore v{VERSION}</p>
           <form onSubmit={handleLogin} className="space-y-4">
             <input
               type="password"
@@ -244,7 +245,7 @@ export default function AdminPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-stone-800">Admin</h1>
-            <p className="text-sm text-stone-600">User & Settings · Forklore v0.5.0</p>
+            <p className="text-sm text-stone-600">User & Settings · Forklore v{VERSION}</p>
           </div>
           <div className="flex gap-2">
             <Link
