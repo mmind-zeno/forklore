@@ -206,21 +206,21 @@ export function PlanWeek({
 
         {showShoppingList && (
           <div className="mt-4 bg-warmwhite rounded-2xl border border-espresso/5 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-espresso/5 flex flex-wrap items-baseline gap-2">
+            <div className="px-5 py-4 border-b border-espresso/5 flex flex-wrap items-center gap-3">
               <h2 className="font-display font-bold text-espresso text-lg">Einkaufsliste</h2>
               {shoppingItems.length > 0 && (
-                <span className="text-sm text-espresso-light">
-                  {shoppingItems.length} Position{shoppingItems.length !== 1 ? "en" : ""} aus {plannedCount} Rezept{plannedCount !== 1 ? "en" : ""}
+                <span className="text-sm text-espresso-light bg-cream/80 px-2.5 py-1 rounded-full">
+                  {shoppingItems.length} Position{shoppingItems.length !== 1 ? "en" : ""} · {plannedCount} Rezept{plannedCount !== 1 ? "e" : ""}
                 </span>
               )}
             </div>
             {loadingList ? (
-              <div className="p-8 flex items-center justify-center gap-2 text-espresso-light">
-                <Loader2 size={20} className="animate-spin" />
+              <div className="p-10 flex items-center justify-center gap-2 text-espresso-light">
+                <Loader2 size={22} className="animate-spin text-terra" />
                 <span>Einkaufsliste wird erstellt …</span>
               </div>
             ) : shoppingItems.length === 0 ? (
-              <div className="p-8 text-center">
+              <div className="p-10 text-center">
                 <p className="text-espresso-light mb-2">
                   {plannedCount === 0
                     ? "Lege zuerst oben Rezepte für die Woche fest."
@@ -233,25 +233,27 @@ export function PlanWeek({
                 )}
               </div>
             ) : (
-              <div className="p-5 sm:p-6">
+              <div className="p-4 sm:p-6">
                 {Object.entries(groupedByCategory).map(([category, items]) => (
                   <div key={category} className="mb-6 last:mb-0">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-terra mb-2.5 pb-1 border-b border-terra/20">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-terra mb-3 px-2 py-1.5 rounded-lg bg-terra/5 border-l-2 border-terra/30">
                       {category}
                     </h3>
-                    <ul className="space-y-1.5">
+                    <ul className="space-y-0 divide-y divide-espresso/5 rounded-lg overflow-hidden bg-cream/30">
                       {items.map((item, i) => (
                         <li
                           key={`${item.name}-${item.unit}-${i}`}
-                          className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm"
+                          className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-4 px-3 py-2.5 sm:py-2 hover:bg-cream/50 transition-colors"
                         >
-                          <span className="font-semibold text-espresso">{item.name}</span>
-                          <span className="text-espresso-light">
-                            {item.amount !== "—" && `${item.amount} `}
-                            {item.unit !== "—" && item.unit}
-                          </span>
+                          <div className="flex items-baseline gap-2 min-w-0 flex-1">
+                            <span className="font-semibold text-espresso truncate">{item.name}</span>
+                            <span className="shrink-0 text-espresso-light text-sm tabular-nums">
+                              {item.amount !== "—" && `${item.amount} `}
+                              {item.unit !== "—" && item.unit}
+                            </span>
+                          </div>
                           {item.recipes.length > 0 && (
-                            <span className="text-espresso-light/60 text-xs w-full sm:w-auto">
+                            <span className="text-espresso-light/70 text-xs truncate sm:max-w-md" title={item.recipes.join(", ")}>
                               für {item.recipes.join(", ")}
                             </span>
                           )}

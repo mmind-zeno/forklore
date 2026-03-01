@@ -22,6 +22,22 @@ function normalizeRecipeTitle(title: string): string {
     .trim();
 }
 
+/** Einheit normalisieren, damit "g Gramm" und "g" zusammenfallen. */
+function normalizeUnit(raw: string): string {
+  const u = raw.trim().toLowerCase();
+  if (!u) return "—";
+  if (/^g\s*(gramm)?$/.test(u) || u === "gramm") return "g";
+  if (/^kg\s*(kilogramm)?$/.test(u) || u === "kilogramm") return "kg";
+  if (/^(ml|milliliter)$/.test(u) || /^ml\s*milliliter$/.test(u)) return "ml";
+  if (/^(l|liter)$/.test(u)) return "l";
+  if (/^(tl|teelöffel)$/.test(u) || /^tl\s*teelöffel$/.test(u)) return "TL";
+  if (/^(el|esslöffel)$/.test(u) || /^el\s*esslöffel$/.test(u)) return "EL";
+  if (/^(prise|prisen)$/.test(u)) return "Prise";
+  if (/^(pkg|packung|päckchen)$/.test(u)) return "Pkg";
+  if (/^(stück|stk?\.?)$/.test(u)) return "Stück";
+  return u;
+}
+
 /** Normalisiert Zutatenname für Zusammenfassung (Singular, Synonyme). Gibt vollen Namen zurück, wenn nicht im Map. */
 function normalizeName(raw: string): string {
   const s = raw.trim().toLowerCase();
@@ -56,8 +72,15 @@ function normalizeName(raw: string): string {
     "creme fraiche": "sahne",
     creme: "sahne",
     schmand: "sahne",
+    schlagsahne: "sahne",
     käse: "käse",
     tapiokastärke: "tapioka",
+    "tapioka stärke": "tapioka",
+    ananasscheibe: "ananas",
+    ananasscheiben: "ananas",
+    "frische sprossen": "sprossen",
+    "soja dressing": "soja-dressing",
+    "soja-dressing": "soja-dressing",
   };
   const key = s.replace(/\s*,\s*.*$/, "").trim(); // "Zwiebel, fein gewürfelt" → "zwiebel"
   const base = key.split(/\s+/)[0] ?? key;
@@ -164,7 +187,8 @@ export async function getShoppingList(weekStart: string): Promise<{
         const rawName = (ing.name ?? "").trim();
         if (!rawName) continue;
         const normalized = normalizeName(rawName);
-        const unit = (ing.unit ?? "").trim() || "—";
+        const rawUnit = (ing.unit ?? "").trim() || "—";
+        const unit = normalizeUnit(rawUnit);
         const amountStr = (ing.amount ?? "").trim() || "—";
         const key = `${normalized}::${unit}`;
         const numRaw = parseAmount(amountStr) ?? parseFloat(amountStr.replace(",", "."));
