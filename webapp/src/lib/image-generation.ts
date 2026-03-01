@@ -2,95 +2,79 @@ import { prisma } from "./prisma";
 
 const IMAGE_API_KEY = "image_api_key";
 const REPLICATE_FLUX = "black-forest-labs/flux-schnell";
-const NANOBANANA_BASE = "https://api.nanobananaapi.ai/api/v1/nanobanana";
-const POLL_INTERVAL_MS = 2000;
-const POLL_MAX_ATTEMPTS = 35; // ~70s max
+const HF_INFERENCE_SDXL =
+  "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0";
+const HF_RETRY_ATTEMPTS = 3;
+const HF_RETRY_DELAY_MS = 20_000;
+const FOOD_PROMPT_SUFFIX =
+  " professional food photography, high resolution, detailed, studio lighting, appetizing, 4k";
 
 export async function getImageApiKey(): Promise<string | undefined> {
   const s = await prisma.setting.findUnique({ where: { key: IMAGE_API_KEY } });
   if (s?.value) return s.value;
-  return process.env.REPLICATE_API_TOKEN ?? process.env.IMAGE_API_KEY;
+  return (
+    process.env.REPLICATE_API_TOKEN ??
+    process.env.HUGGINGFACE_API_KEY ??
+    process.env.IMAGE_API_KEY
+  );
 }
 
-/** Replicate tokens typically start with r8_. Otherwise we use NanoBanana. */
 function isReplicateKey(key: string): boolean {
   return key.trim().toLowerCase().startsWith("r8_");
 }
 
+function isHuggingFaceKey(key: string): boolean {
+  return key.trim().toLowerCase().startsWith("hf_");
+}
+
 /**
- * Generate an image via NanoBanana (TEXTTOIMAGE). Uses callBackUrl + polling record-info.
- * Returns image as Buffer (PNG) or null on failure.
+ * Generate an image via Hugging Face Inference (SDXL). Retries up to 3 times
+ * with 20s delay on 503 (model loading). Returns image as Buffer or null on failure.
  */
-export async function generateImageWithNanoBanana(
+export async function generateImageWithHuggingFace(
   prompt: string,
   apiKey: string
 ): Promise<Buffer | null> {
-  const baseUrl =
-    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://forklore.mmind.space");
-  const callBackUrl = `${baseUrl}/api/webhooks/nanobanana`;
+  const fullPrompt = prompt + FOOD_PROMPT_SUFFIX;
 
-  const res = await fetch(`${NANOBANANA_BASE}/generate`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey.trim()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      prompt,
-      type: "TEXTTOIAMGE",
-      callBackUrl,
-      numImages: 1,
-    }),
-  });
+  for (let attempt = 1; attempt <= HF_RETRY_ATTEMPTS; attempt++) {
+    const res = await fetch(HF_INFERENCE_SDXL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ inputs: fullPrompt }),
+    });
 
-  if (!res.ok) {
-    console.error("NanoBanana generate failed:", res.status, await res.text());
-    return null;
-  }
-
-  const gen = (await res.json()) as { taskId?: string; code?: number; msg?: string };
-  const taskId = gen.taskId;
-  if (!taskId || typeof taskId !== "string") {
-    console.error("NanoBanana no taskId:", gen);
-    return null;
-  }
-
-  for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-
-    const infoRes = await fetch(
-      `${NANOBANANA_BASE}/record-info?taskId=${encodeURIComponent(taskId)}`,
-      {
-        headers: { Authorization: `Bearer ${apiKey.trim()}` },
+    if (res.status === 503) {
+      if (attempt < HF_RETRY_ATTEMPTS) {
+        console.warn(
+          `Hugging Face 503 (model loading), retry ${attempt}/${HF_RETRY_ATTEMPTS} in ${HF_RETRY_DELAY_MS / 1000}s`
+        );
+        await new Promise((r) => setTimeout(r, HF_RETRY_DELAY_MS));
+        continue;
       }
-    );
-    if (!infoRes.ok) {
-      console.error("NanoBanana record-info failed:", infoRes.status);
-      continue;
-    }
-
-    const info = (await infoRes.json()) as {
-      data?: {
-        successFlag?: number;
-        response?: { resultImageUrl?: string };
-        errorMessage?: string;
-      };
-    };
-    const flag = info.data?.successFlag;
-    if (flag === 2 || flag === 3) {
-      console.error("NanoBanana task failed:", info.data?.errorMessage ?? info);
+      console.error("Hugging Face still 503 after retries");
       return null;
     }
-    if (flag === 1 && info.data?.response?.resultImageUrl) {
-      const imgRes = await fetch(info.data.response.resultImageUrl);
-      if (!imgRes.ok) return null;
-      const arrayBuffer = await imgRes.arrayBuffer();
-      return Buffer.from(arrayBuffer);
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Hugging Face inference failed:", res.status, text);
+      return null;
     }
+
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.startsWith("image/")) {
+      console.error("Hugging Face did not return an image:", contentType, await res.text());
+      return null;
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
   }
 
-  console.error("NanoBanana polling timeout for taskId:", taskId);
   return null;
 }
 
@@ -139,8 +123,8 @@ export async function generateImageWithReplicate(prompt: string): Promise<Buffer
 }
 
 /**
- * Generate an image using the configured API key: Replicate (key r8_...) or NanoBanana.
- * Returns image as Buffer (PNG) or null on failure.
+ * Generate an image using the configured API key: Replicate (r8_...) or Hugging Face (hf_...).
+ * Returns image as Buffer or null on failure.
  */
 export async function generateImage(prompt: string): Promise<Buffer | null> {
   const key = await getImageApiKey();
@@ -149,5 +133,9 @@ export async function generateImage(prompt: string): Promise<Buffer | null> {
   if (isReplicateKey(key)) {
     return generateImageWithReplicate(prompt);
   }
-  return generateImageWithNanoBanana(prompt, key);
+  if (isHuggingFaceKey(key)) {
+    return generateImageWithHuggingFace(prompt, key);
+  }
+  // Default to Hugging Face if key is set but no known prefix (e.g. from env HUGGINGFACE_API_KEY)
+  return generateImageWithHuggingFace(prompt, key);
 }

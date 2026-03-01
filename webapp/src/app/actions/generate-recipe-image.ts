@@ -6,10 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { generateImage } from "@/lib/image-generation";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 
 /**
- * Generate a recipe image via Replicate (Bild-API Key) and optionally attach it to a recipe.
- * Prompt is built from title and optional main ingredients.
+ * Generate a recipe image via Hugging Face or Replicate (Bild-API Key) and optionally attach it to a recipe.
+ * Saves as .webp for smaller file size. Prompt is built from title and optional main ingredients.
  */
 export async function generateRecipeImage(params: {
   recipeId?: string;
@@ -32,10 +33,14 @@ export async function generateRecipeImage(params: {
       };
     }
 
+    const webpBuffer = await sharp(buffer)
+      .webp({ quality: 85 })
+      .toBuffer();
+
     const uploadsDir = path.join(process.cwd(), "uploads");
     await mkdir(uploadsDir, { recursive: true });
-    const filename = `gen-${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
-    await writeFile(path.join(uploadsDir, filename), buffer);
+    const filename = `gen-${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+    await writeFile(path.join(uploadsDir, filename), webpBuffer);
 
     if (params.recipeId) {
       const recipe = await prisma.recipe.findUnique({
