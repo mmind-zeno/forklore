@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Calendar, Sparkles } from "lucide-react";
 import { getMealPlan } from "@/app/actions/get-meal-plan";
 import { setMealPlanEntry } from "@/app/actions/set-meal-plan-entry";
 import { getShoppingList } from "@/app/actions/get-shopping-list";
+import { getShoppingListWithAI } from "@/app/actions/get-shopping-list-ai";
 
 const DAY_NAMES = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 
@@ -33,6 +34,7 @@ function isCurrentWeek(weekStart: string): boolean {
 
 type Entry = { dayOfWeek: number; recipeId: string; recipe: { id: string; title: string; imagePath: string | null } };
 type ShoppingItem = { name: string; amount: string; unit: string; recipes: string[]; category: string };
+type ListSource = "standard" | "ai";
 
 export function PlanWeek({
   initialWeekStart,
@@ -49,6 +51,9 @@ export function PlanWeek({
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [showShoppingList, setShowShoppingList] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
+  const [listSource, setListSource] = useState<ListSource>("standard");
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
 
   const loadPlan = useCallback(async (ws: string) => {
     setLoading(true);
@@ -81,10 +86,26 @@ export function PlanWeek({
   const handleShowShoppingList = async () => {
     setShowShoppingList(true);
     setLoadingList(true);
+    setListError(null);
     const res = await getShoppingList(weekStart);
-    if (res.success && res.items) setShoppingItems(res.items);
-    else setShoppingItems([]);
+    if (res.success && res.items) {
+      setShoppingItems(res.items);
+      setListSource("standard");
+    } else setShoppingItems([]);
     setLoadingList(false);
+  };
+
+  const handleOptimizeWithAI = async () => {
+    setLoadingAI(true);
+    setListError(null);
+    const res = await getShoppingListWithAI(weekStart);
+    setLoadingAI(false);
+    if (res.success && res.items !== undefined) {
+      setShoppingItems(res.items);
+      setListSource("ai");
+    } else {
+      setListError(res.error ?? "KI-Optimierung fehlgeschlagen.");
+    }
   };
 
   const entryByDay = (day: number) => entries.find((e) => e.dayOfWeek === day);
@@ -183,41 +204,73 @@ export function PlanWeek({
         </div>
       </section>
 
-      {/* Einkaufsliste – immer sichtbarer Block, Inhalt nach Klick */}
-      <section aria-label="Einkaufsliste">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Einkaufsliste */}
+      <section aria-label="Einkaufsliste" className="space-y-4">
+        <div className="flex flex-col gap-3">
           <p className="text-sm text-espresso-light">
-            Aus den geplanten Rezepten wird eine zusammengefasste Einkaufsliste erzeugt (Mengen summiert, nach Kategorien sortiert).
+            Erzeuge eine Einkaufsliste aus den geplanten Rezepten – optional von der KI zusammenfassen und bereinigen lassen.
           </p>
-          <button
-            type="button"
-            onClick={handleShowShoppingList}
-            disabled={loadingList || plannedCount === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-cta px-5 py-3 text-white text-sm font-bold tracking-wide shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all duration-200 disabled:opacity-60 disabled:hover:translate-y-0 shrink-0"
-          >
-            {loadingList ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <ShoppingCart size={18} />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleShowShoppingList}
+              disabled={loadingList || plannedCount === 0}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-cta px-5 py-3 text-white text-sm font-bold tracking-wide shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all duration-200 disabled:opacity-60 disabled:hover:translate-y-0"
+            >
+              {loadingList ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <ShoppingCart size={18} />
+              )}
+              {loadingList ? "Wird erstellt …" : "Einkaufsliste anzeigen"}
+            </button>
+            {showShoppingList && shoppingItems.length > 0 && (
+              <button
+                type="button"
+                onClick={handleOptimizeWithAI}
+                disabled={loadingAI || loadingList}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-terra/40 bg-terra/5 px-5 py-3 text-terra text-sm font-bold tracking-wide hover:bg-terra/15 transition-all duration-200 disabled:opacity-50"
+              >
+                {loadingAI ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Sparkles size={18} />
+                )}
+                {loadingAI ? "KI optimiert …" : "Mit KI optimieren"}
+              </button>
             )}
-            {loadingList ? "Wird erstellt …" : "Einkaufsliste anzeigen"}
-          </button>
+          </div>
         </div>
 
         {showShoppingList && (
-          <div className="mt-4 bg-warmwhite rounded-2xl border border-espresso/5 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-espresso/5 flex flex-wrap items-center gap-3">
+          <div className="bg-warmwhite rounded-2xl border border-espresso/5 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-espresso/5 flex flex-wrap items-center gap-2 sm:gap-3">
               <h2 className="font-display font-bold text-espresso text-lg">Einkaufsliste</h2>
+              {listSource === "ai" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-terra bg-terra/10 px-2.5 py-1 rounded-full">
+                  <Sparkles size={12} /> Von KI zusammengefasst
+                </span>
+              )}
               {shoppingItems.length > 0 && (
                 <span className="text-sm text-espresso-light bg-cream/80 px-2.5 py-1 rounded-full">
                   {shoppingItems.length} Position{shoppingItems.length !== 1 ? "en" : ""} · {plannedCount} Rezept{plannedCount !== 1 ? "e" : ""}
                 </span>
               )}
             </div>
+            {listError && (
+              <div className="mx-4 mt-3 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                {listError}
+              </div>
+            )}
             {loadingList ? (
               <div className="p-10 flex items-center justify-center gap-2 text-espresso-light">
                 <Loader2 size={22} className="animate-spin text-terra" />
                 <span>Einkaufsliste wird erstellt …</span>
+              </div>
+            ) : loadingAI ? (
+              <div className="p-10 flex items-center justify-center gap-2 text-espresso-light">
+                <Loader2 size={22} className="animate-spin text-terra" />
+                <span>KI fasst die Liste zusammen …</span>
               </div>
             ) : shoppingItems.length === 0 ? (
               <div className="p-10 text-center">
@@ -248,8 +301,8 @@ export function PlanWeek({
                           <div className="flex items-baseline gap-2 min-w-0 flex-1">
                             <span className="font-semibold text-espresso truncate">{item.name}</span>
                             <span className="shrink-0 text-espresso-light text-sm tabular-nums">
-                              {item.amount !== "—" && `${item.amount} `}
-                              {item.unit !== "—" && item.unit}
+                              {item.amount !== "—" && item.amount !== "" && `${item.amount} `}
+                              {item.unit !== "—" && item.unit !== "" && item.unit}
                             </span>
                           </div>
                           {item.recipes.length > 0 && (
