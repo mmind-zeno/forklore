@@ -38,7 +38,7 @@ export async function createRecipe(
     const session = await getServerSession(authOptions);
     if (session?.user?.id) {
       const until = session.user.aiAccessUntil;
-      if (until == null || new Date(until) <= new Date()) {
+      if (until != null && new Date(until) <= new Date()) {
         return { success: false, error: "KI-Zugang nicht aktiv. Bitte Admin kontaktieren." };
       }
     }

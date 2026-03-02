@@ -36,7 +36,7 @@ export async function getShoppingListWithAI(weekStart: string): Promise<{
       return { success: false, error: "Nicht angemeldet." };
     }
     const aiUntil = session.user.aiAccessUntil;
-    if (aiUntil == null || new Date(aiUntil) <= new Date()) {
+    if (aiUntil != null && new Date(aiUntil) <= new Date()) {
       return { success: false, error: "KI-Zugang nicht aktiv. Bitte Admin kontaktieren." };
     }
 
