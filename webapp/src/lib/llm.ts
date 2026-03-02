@@ -86,13 +86,33 @@ export async function chatCompletion(params: ChatCompletionParams): Promise<stri
   }
   contents.push({ text: userMessage });
 
-  const res = await ai.models.generateContent({
-    model: modelId,
-    config: { systemInstruction: systemPrompt },
-    contents,
-  });
+  let res;
+  try {
+    res = await ai.models.generateContent({
+      model: modelId,
+      config: { systemInstruction: systemPrompt },
+      contents,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota"))
+      throw new Error("Gemini-Limit erreicht. Bitte später erneut versuchen oder in Admin ein anderes Modell wählen (z. B. Gemini 2.5 Flash).");
+    if (msg.includes("404") || msg.includes("NOT_FOUND"))
+      throw new Error("Gemini-Modell nicht gefunden. In Admin → Settings ein gültiges Modell wählen (z. B. Gemini 2.5 Flash).");
+    if (msg.includes("403") || msg.includes("PERMISSION_DENIED"))
+      throw new Error("Gemini API Key ungültig oder ohne Berechtigung. Bitte in Admin prüfen.");
+    throw err;
+  }
 
-  const text = res.text?.trim();
-  if (!text) throw new Error("Keine Antwort von Gemini");
+  let text = res.text?.trim();
+  if (!text && Array.isArray(res.candidates?.[0]?.content?.parts)) {
+    const parts = res.candidates[0].content.parts as Array<{ text?: string }>;
+    text = parts.map((p) => p.text).filter(Boolean).join(" ").trim();
+  }
+  if (!text) {
+    const blockReason = res.promptFeedback?.blockReason;
+    if (blockReason) throw new Error(`Gemini hat die Anfrage blockiert (${blockReason}). Bitte Inhalt anpassen.`);
+    throw new Error("Keine Antwort von Gemini. Bitte erneut versuchen oder anderes Modell in Admin wählen.");
+  }
   return text;
 }

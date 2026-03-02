@@ -1,4 +1,4 @@
-# Forklore – Recipe App v0.7.8
+# Forklore – Recipe App v0.7.9
 
 Rezepte per Notiz, Foto und Sprache erfassen. Mobile-first Web-App.
 
