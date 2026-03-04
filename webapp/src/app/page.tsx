@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { HeaderWithSuspense } from "@/components/HeaderWithSuspense";
+import { HeroSection } from "@/components/HeroSection";
 import { RecipeCard } from "@/components/RecipeCard";
 import { RecipeSidebar } from "@/components/RecipeSidebar";
 import { VeganFilterToggle } from "@/components/VeganFilterToggle";
@@ -230,82 +231,20 @@ export default async function HomePage({ searchParams }: PageProps) {
     console.error("Top users query error:", err);
   }
 
+  const heroImagePath = recipesWithMeta[0]?.imagePath ?? null;
+
   return (
     <div className="min-h-screen bg-cream">
       <HeaderWithSuspense />
 
-      <main className="pt-24 px-6 py-8 pb-24 max-w-6xl mx-auto">
-        {/* Hero – nur wenn Rezepte vorhanden */}
-        {recipes.length > 0 && (
-          <section className="mb-10 reveal">
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div>
-                <h1 className="font-display text-4xl md:text-5xl font-bold text-espresso leading-tight">
-                  Willkommen in meiner Küche
-                </h1>
-                <p className="mt-4 text-espresso-mid text-lg max-w-lg">
-                  Deine Rezepte – schnell erfasst, strukturiert gespeichert. Schreib eine Notiz oder sprich dein nächstes Rezept ein.
-                </p>
-                <div className="w-12 h-0.5 bg-gradient-cta rounded-full mt-6 mb-5" />
-                <div className="flex flex-wrap gap-6">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">🥐</span>
-                    <span className="font-bold text-espresso">{backenCount}</span>
-                    <span className="text-espresso-light text-sm font-bold uppercase tracking-widest">Backen</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">🍳</span>
-                    <span className="font-bold text-espresso">{kochenCount}</span>
-                    <span className="text-espresso-light text-sm font-bold uppercase tracking-widest">Kochen</span>
-                  </div>
-                </div>
-              </div>
-              {/* Rezept-Vorschau rechts: erstes Rezept als Karte */}
-              <div className="relative h-48 lg:h-64 rounded-2xl overflow-hidden border border-espresso/5 shadow-soft">
-                {recipesWithMeta[0] ? (
-                  <>
-                    {recipesWithMeta[0].imagePath ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={`/api/uploads/${recipesWithMeta[0].imagePath}`}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-cream-dark via-cream to-warmwhite flex flex-col items-center justify-center gap-2">
-                        <span className="text-5xl opacity-60">
-                          {recipesWithMeta[0].category === "backen" ? "🥐" : recipesWithMeta[0].category === "kochen" ? "🍳" : "🍽️"}
-                        </span>
-                        <span className="font-display italic text-espresso-light text-sm text-center px-4 line-clamp-2">
-                          {recipesWithMeta[0].title}
-                        </span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-espresso/75 via-espresso/20 to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest">
-                        {recipesWithMeta[0].category === "backen" ? "Backen" : recipesWithMeta[0].category === "kochen" ? "Kochen" : "Rezept"}
-                      </span>
-                      <p className="font-display italic text-white text-lg leading-tight mt-0.5 drop-shadow-sm">
-                        {recipesWithMeta[0].title}
-                      </p>
-                    </div>
-                    <Link
-                      href={`/recipe/${recipesWithMeta[0].id}`}
-                      className="absolute inset-0"
-                      aria-label={`Rezept ${recipesWithMeta[0].title} ansehen`}
-                    />
-                  </>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-hero">
-                    <span className="text-7xl md:text-8xl opacity-40">🍴</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
+      <main className="pt-24">
+        <HeroSection
+          heroImagePath={heroImagePath}
+          backenCount={backenCount}
+          kochenCount={kochenCount}
+        />
 
+        <div className="px-6 py-8 pb-24 max-w-6xl mx-auto">
         {topUsers.length > 0 && (
           <section className="mb-10 reveal">
             <h2 className="font-display text-xl font-bold text-espresso mb-4">Beste Köche</h2>
@@ -506,6 +445,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               />
             </aside>
           )}
+        </div>
         </div>
       </main>
     </div>
