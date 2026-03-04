@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#FFF8F0"/>
+  <!-- Fork: handle + 3 tines -->
+  <rect x="13" y="4" width="6" height="12" rx="1" fill="#C8543A"/>
+  <rect x="10" y="16" width="2" height="12" fill="#C8543A"/>
+  <rect x="15" y="16" width="2" height="12" fill="#C8543A"/>
+  <rect x="20" y="16" width="2" height="12" fill="#C8543A"/>
+</svg>

@@ -162,13 +162,15 @@ export function HeaderWithAuth() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/profile"
-            onClick={() => setMobileOpen(false)}
-            className="font-display text-xl italic text-espresso hover:text-terra transition-colors"
-          >
-            Profil
-          </Link>
+          {session?.user && (
+            <Link
+              href="/profile"
+              onClick={() => setMobileOpen(false)}
+              className="font-display text-xl italic text-espresso hover:text-terra transition-colors"
+            >
+              Profil
+            </Link>
+          )}
           <Link
             href="/add"
             onClick={() => setMobileOpen(false)}
@@ -176,6 +178,18 @@ export function HeaderWithAuth() {
           >
             + Neues Rezept
           </Link>
+          {session?.user && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileOpen(false);
+                signOut({ callbackUrl: "/login" });
+              }}
+              className="font-display text-xl italic text-espresso hover:text-terra transition-colors"
+            >
+              Abmelden
+            </button>
+          )}
         </div>
       )}
     </header>
