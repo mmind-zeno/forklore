@@ -188,6 +188,7 @@ export default function AddRecipePage() {
             <input
               type="file"
               accept="image/*"
+              capture={mode === "mic" ? "environment" : undefined}
               className="hidden"
               onChange={handleImageCapture}
             />

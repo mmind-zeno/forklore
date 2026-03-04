@@ -326,7 +326,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                   name="main"
                   defaultValue={mainIngredient}
                   placeholder="z.B. Lachs, Dill, Zitrone"
-                  className="flex-1 min-w-[200px] rounded-full border border-sage/30 bg-white/80 px-4 py-2.5 text-sm text-espresso placeholder:text-espresso-light/60 focus:outline-none focus:ring-2 focus:ring-sage/40"
+                  className="flex-1 min-w-0 rounded-full border border-sage/30 bg-white/80 px-4 py-2.5 text-sm text-espresso placeholder:text-espresso-light/60 focus:outline-none focus:ring-2 focus:ring-sage/40"
                 />
                 <button
                   type="submit"

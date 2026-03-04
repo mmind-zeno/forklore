@@ -23,6 +23,12 @@ export const metadata: Metadata = {
   description: "Rezepte per Notiz, Foto und Sprache erfassen",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#FFF8F0",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

@@ -142,7 +142,7 @@ export function HeaderWithAuth() {
           <button
             type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden w-10 h-10 flex flex-col justify-center gap-1.5"
+            className="md:hidden min-w-[44px] min-h-[44px] w-11 h-11 flex flex-col justify-center gap-1.5"
             aria-label={mobileOpen ? "Menü schließen" : "Menü öffnen"}
           >
             <span

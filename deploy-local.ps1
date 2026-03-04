@@ -1,9 +1,9 @@
-# Deploy Forklore v0.7.13 to Hetzner
+# Deploy Forklore v0.8.3 to Hetzner
 # Usage: .\deploy-local.ps1 [ssh-host]
 param([string]$SshHost = "hetzner")
 
 $ErrorActionPreference = "Stop"
-Write-Host "=== Deploying Forklore v0.7.13 to $SshHost ===" -ForegroundColor Cyan
+Write-Host "=== Deploying Forklore v0.8.3 to $SshHost ===" -ForegroundColor Cyan
 
 # Copy webapp (exclude node_modules, .next)
 $deployDir = "webapp-deploy"

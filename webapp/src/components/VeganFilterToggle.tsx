@@ -19,12 +19,12 @@ export function VeganFilterToggle() {
   };
 
   return (
-    <label className="flex items-center gap-2 cursor-pointer select-none">
+    <label className="flex items-center gap-2 cursor-pointer select-none py-2 px-1 -m-1 min-h-[44px] min-w-[44px]">
       <input
         type="checkbox"
         checked={vegan}
         onChange={toggle}
-        className="w-4 h-4 rounded border-espresso/30 text-sage focus:ring-terra"
+        className="w-5 h-5 rounded border-espresso/30 text-sage focus:ring-terra"
       />
       <span className="text-sm font-bold text-espresso">🌱 Nur vegan</span>
     </label>

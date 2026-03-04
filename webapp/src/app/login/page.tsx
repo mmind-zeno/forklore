@@ -2,13 +2,12 @@
 
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const LOGIN_TIMEOUT_MS = 20000;
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const [email, setEmail] = useState("");
@@ -35,8 +34,12 @@ function LoginForm() {
         setLoading(false);
         return;
       }
-      router.push(callbackUrl);
-      router.refresh();
+      if (!res) {
+        setError("Anmeldung fehlgeschlagen. Bitte erneut versuchen.");
+        setLoading(false);
+        return;
+      }
+      window.location.href = callbackUrl;
     } catch (err) {
       setError(
         err instanceof Error && err.message === "TIMEOUT"

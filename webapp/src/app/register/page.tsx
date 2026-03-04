@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -16,8 +15,9 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    let res: Response | undefined;
     try {
-      const res = await fetch("/api/auth/register", {
+      res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password, name: name.trim() || undefined }),
@@ -28,11 +28,26 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
-      router.push("/login?registered=1");
-      router.refresh();
+
+      const signInRes = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
+
+      if (!signInRes || signInRes.error) {
+        window.location.href = "/login?registered=1";
+        return;
+      }
+
+      window.location.href = "/";
     } catch {
-      setError("Ein Fehler ist aufgetreten.");
-      setLoading(false);
+      if (res?.ok) {
+        window.location.href = "/login?registered=1";
+      } else {
+        setError("Ein Fehler ist aufgetreten.");
+        setLoading(false);
+      }
     }
   }
 

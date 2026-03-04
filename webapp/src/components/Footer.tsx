@@ -5,7 +5,7 @@ const YEAR = new Date().getFullYear();
 
 export function Footer() {
   return (
-    <footer className="mt-auto bg-espresso text-cream/65 pt-16 pb-8">
+    <footer className="mt-auto bg-espresso text-cream/65 pt-16 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
@@ -43,27 +43,27 @@ export function Footer() {
             <h3 className="font-display italic text-cream text-lg mb-5">Schnelllinks</h3>
             <ul className="space-y-1">
               <li>
-                <Link href="/" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Rezepte
                 </Link>
               </li>
               <li>
-                <Link href="/?category=backen" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/?category=backen" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Backen
                 </Link>
               </li>
               <li>
-                <Link href="/?category=kochen" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/?category=kochen" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Kochen
                 </Link>
               </li>
               <li>
-                <Link href="/tips" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/tips" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Tips & Tricks
                 </Link>
               </li>
               <li>
-                <Link href="/add" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/add" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Neues Rezept
                 </Link>
               </li>
@@ -75,17 +75,17 @@ export function Footer() {
             <h3 className="font-display italic text-cream text-lg mb-5">Kategorien</h3>
             <ul className="space-y-1">
               <li>
-                <Link href="/?category=backen" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/?category=backen" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Backen
                 </Link>
               </li>
               <li>
-                <Link href="/?category=kochen" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/?category=kochen" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Kochen
                 </Link>
               </li>
               <li>
-                <Link href="/tips" className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200">
+                <Link href="/tips" className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200">
                   Tips & Tricks
                 </Link>
               </li>
@@ -101,27 +101,25 @@ export function Footer() {
                   href="https://mmind.ai/impressum"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200"
+                  className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200"
                 >
                   Impressum
                 </a>
               </li>
               <li>
-                <a
-                  href="https://mmind.ai/datenschutz"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200"
+                <Link
+                  href="/datenschutz"
+                  className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200"
                 >
                   Datenschutz
-                </a>
+                </Link>
               </li>
               <li>
                 <a
                   href="https://mmind.ai/disclaimer"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-cream/60 text-sm py-1 hover:text-honey-light hover:pl-1 transition-all duration-200"
+                  className="block text-cream/60 text-sm py-2 min-h-[44px] flex items-center hover:text-honey-light hover:pl-1 transition-all duration-200"
                 >
                   Disclaimer
                 </a>
@@ -153,14 +151,14 @@ export function Footer() {
           </div>
           <div className="flex flex-wrap justify-center items-center gap-4 mb-4">
             <a
-              href="mailto:hello@mmind.ai?subject=Forklore%20%E2%80%93%20Gef%C3%A4llt%20mir!"
+              href="mailto:info@mmind.ai?subject=Forklore%20%E2%80%93%20Gef%C3%A4llt%20mir!"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cream/10 hover:bg-cream/20 text-cream text-sm font-bold transition-colors"
             >
               <Heart size={16} />
               Gefällt mir
             </a>
             <a
-              href="mailto:hello@mmind.ai?subject=Forklore%20%E2%80%93%20Feedback%20%2F%20Kommentar"
+              href="mailto:info@mmind.ai?subject=Forklore%20%E2%80%93%20Feedback%20%2F%20Kommentar"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cream/10 hover:bg-cream/20 text-cream text-sm font-bold transition-colors"
             >
               <MessageCircle size={16} />

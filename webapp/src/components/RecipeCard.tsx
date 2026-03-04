@@ -78,13 +78,13 @@ export function RecipeCard({
           onClick={handleToggleFavorite}
           disabled={isTogglingFavorite}
           aria-label={isFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
-          className={`absolute top-3 right-12 z-10 w-8 h-8 rounded-full backdrop-blur-sm border flex items-center justify-center transition-all duration-200 shadow-sm ${
+          className={`absolute top-3 right-16 z-10 min-w-[44px] min-h-[44px] w-11 h-11 rounded-full backdrop-blur-sm border flex items-center justify-center transition-all duration-200 shadow-sm ${
             isFavorite
               ? "bg-terra/90 border-terra text-white hover:bg-terra"
-              : "bg-warmwhite/90 border-espresso/10 opacity-0 group-hover:opacity-100 hover:bg-terra/20 hover:border-terra/30 text-espresso"
+              : "bg-warmwhite/90 border-espresso/10 opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-terra/20 hover:border-terra/30 text-espresso"
           }`}
         >
-          <Heart size={14} fill={isFavorite ? "currentColor" : "none"} />
+          <Heart size={16} fill={isFavorite ? "currentColor" : "none"} />
         </button>
       )}
       {/* Quick edit button */}
@@ -92,9 +92,9 @@ export function RecipeCard({
         href={`/edit/${recipe.id}`}
         onClick={(e) => e.stopPropagation()}
         aria-label="Rezept bearbeiten"
-        className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-warmwhite/90 backdrop-blur-sm border border-espresso/10 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-terra hover:text-white hover:border-terra transition-all duration-200 shadow-sm"
+        className="absolute top-3 right-3 z-10 min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-warmwhite/90 backdrop-blur-sm border border-espresso/10 flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-terra hover:text-white hover:border-terra transition-all duration-200 shadow-sm"
       >
-        <Pencil size={13} />
+        <Pencil size={16} />
       </Link>
       <Link href={`/recipe/${recipe.id}`} className="block cursor-pointer">
       {/* Image area */}
