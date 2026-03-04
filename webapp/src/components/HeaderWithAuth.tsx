@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
 
 export function HeaderWithAuth() {
   const { data: session } = useSession();
@@ -82,49 +81,61 @@ export function HeaderWithAuth() {
 
           {/* User + CTA Desktop */}
           <div className="hidden md:flex items-center gap-4 shrink-0">
-            {session?.user && (
+            {session?.user ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 text-espresso-light hover:text-terra transition-colors"
+                  title="Profil"
+                >
+                  {session.user.image ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={session.user.image}
+                      alt=""
+                      className="w-8 h-8 rounded-full object-cover border border-espresso/10"
+                    />
+                  ) : (
+                    <span className="w-8 h-8 rounded-full bg-cream-dark flex items-center justify-center text-espresso-mid text-xs font-bold">
+                      {(session.user.name || session.user.email || "?").slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="text-xs truncate max-w-[120px]">{session.user.email}</span>
+                </Link>
+                <span className="text-espresso-light/30 mx-1">|</span>
+                <Link
+                  href="/admin"
+                  className="text-sm font-bold text-espresso hover:text-terra transition-colors"
+                >
+                  Admin
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  className="text-sm text-espresso-light hover:text-terra transition-colors"
+                  aria-label="Abmelden"
+                >
+                  Abmelden
+                </button>
+              </>
+            ) : (
               <Link
-                href="/profile"
-                className="flex items-center gap-2 text-espresso-light hover:text-terra transition-colors"
-                title="Profil"
+                href="/login"
+                className="text-sm font-bold text-espresso hover:text-terra transition-colors"
               >
-                {session.user.image ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={session.user.image}
-                    alt=""
-                    className="w-8 h-8 rounded-full object-cover border border-espresso/10"
-                  />
-                ) : (
-                  <span className="w-8 h-8 rounded-full bg-cream-dark flex items-center justify-center text-espresso-mid text-xs font-bold">
-                    {(session.user.name || session.user.email || "?").slice(0, 1).toUpperCase()}
-                  </span>
-                )}
-                <span className="text-xs truncate max-w-[120px]">{session.user.email}</span>
+                Login
               </Link>
             )}
-            <span className="text-espresso-light/30 mx-1">|</span>
-            <Link
-              href="/admin"
-              className="text-sm font-bold text-espresso hover:text-terra transition-colors"
+            <a
+              href="https://mmind.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center h-10 px-3 rounded-full bg-espresso/90 hover:bg-espresso transition-colors"
+              aria-label="mmind.ai"
             >
-              Admin
-            </Link>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm text-espresso-light hover:text-terra transition-colors"
-              aria-label="Abmelden"
-            >
-              Abmelden
-            </button>
-            <Link
-              href="/add"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-cta px-5 py-2.5 text-white text-sm font-bold tracking-wide shadow-card hover:-translate-y-0.5 hover:shadow-hover transition-all duration-200"
-            >
-              <Plus size={16} />
-              Neues Rezept
-            </Link>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo_MMIND_white.svg" alt="mmind.ai" className="h-6 w-auto" />
+            </a>
           </div>
 
           {/* Hamburger Mobile */}
@@ -178,6 +189,16 @@ export function HeaderWithAuth() {
           >
             + Neues Rezept
           </Link>
+          <a
+            href="https://mmind.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-2 py-2 px-4 rounded-full bg-espresso"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo_MMIND_white.svg" alt="mmind.ai" className="h-6 w-auto" />
+          </a>
           {session?.user && (
             <button
               type="button"

@@ -231,7 +231,10 @@ export default async function HomePage({ searchParams }: PageProps) {
     console.error("Top users query error:", err);
   }
 
-  const heroImagePath = recipesWithMeta[0]?.imagePath ?? null;
+  const heroImagePaths = recipesWithMeta
+    .map((r) => r.imagePath)
+    .filter((p): p is string => !!p)
+    .slice(0, 12);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -239,7 +242,7 @@ export default async function HomePage({ searchParams }: PageProps) {
 
       <main className="pt-24">
         <HeroSection
-          heroImagePath={heroImagePath}
+          heroImagePaths={heroImagePaths}
           backenCount={backenCount}
           kochenCount={kochenCount}
         />

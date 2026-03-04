@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Instagram, Youtube } from "lucide-react";
+import { Instagram, Youtube, Heart, MessageCircle } from "lucide-react";
 import { VERSION } from "@/lib/version";
 const YEAR = new Date().getFullYear();
 
@@ -127,6 +127,45 @@ export function Footer() {
                 </a>
               </li>
             </ul>
+          </div>
+        </div>
+
+        {/* MMIND Logo & Werbung */}
+        <div className="border-t border-cream/10 pt-8 pb-6">
+          <div className="flex flex-wrap justify-center items-center gap-6 mb-4">
+            <a
+              href="https://mmind.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+              title="mmind.ai"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo_MMIND_white.svg"
+                alt="mmind.ai"
+                className="h-10 w-auto"
+              />
+            </a>
+            <p className="text-sm text-cream/70 max-w-md text-center">
+              mmind.ai setzt solche Apps in wenigen Tagen und günstig um – von der Idee bis live.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center items-center gap-4 mb-4">
+            <a
+              href="mailto:hello@mmind.ai?subject=Forklore%20%E2%80%93%20Gef%C3%A4llt%20mir!"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cream/10 hover:bg-cream/20 text-cream text-sm font-bold transition-colors"
+            >
+              <Heart size={16} />
+              Gefällt mir
+            </a>
+            <a
+              href="mailto:hello@mmind.ai?subject=Forklore%20%E2%80%93%20Feedback%20%2F%20Kommentar"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cream/10 hover:bg-cream/20 text-cream text-sm font-bold transition-colors"
+            >
+              <MessageCircle size={16} />
+              Kommentar abgeben
+            </a>
           </div>
         </div>
 

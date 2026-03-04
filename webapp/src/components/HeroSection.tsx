@@ -1,17 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+
+const SLOGAN_VARIANTS = [
+  "Willkommen in meiner Küche",
+  "Rezepte, die begeistern",
+  "Backen & Kochen mit Liebe",
+  "Deine Rezepte – für immer bewahrt",
+];
 
 type HeroSectionProps = {
-  heroImagePath?: string | null;
+  heroImagePaths?: string[];
   backenCount?: number;
   kochenCount?: number;
 };
 
-export function HeroSection({ heroImagePath, backenCount = 0, kochenCount = 0 }: HeroSectionProps) {
-  const slogan = "Willkommen in meiner Küche";
-  const description = "Deine Rezepte – schnell erfasst, für immer bewahrt. Schreib eine Notiz oder sprich dein nächstes Rezept ein.";
+export function HeroSection({
+  heroImagePaths = [],
+  backenCount = 0,
+  kochenCount = 0,
+}: HeroSectionProps) {
+  const [index, setIndex] = useState(0);
+  const heroImagePath = heroImagePaths[index % Math.max(1, heroImagePaths.length)] ?? null;
+  const slogan = SLOGAN_VARIANTS[index % SLOGAN_VARIANTS.length];
+  const description =
+    "Deine Rezepte – schnell erfasst, für immer bewahrt. KI generiert Rezepte und Bilder. Schreib eine Notiz oder sprich dein nächstes Rezept ein.";
+
+  useEffect(() => {
+    const id = setInterval(() => setIndex((i) => i + 1), 15000);
+    return () => clearInterval(id);
+  }, []);
 
   const container = {
     hidden: { opacity: 0 },
@@ -30,41 +50,55 @@ export function HeroSection({ heroImagePath, backenCount = 0, kochenCount = 0 }:
     <section className="relative w-full min-h-[55vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
-        {heroImagePath ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/uploads/${heroImagePath}`}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+        <AnimatePresence mode="wait">
+          {heroImagePath ? (
+            <motion.div
+              key={heroImagePath}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8 }}
+              className="absolute inset-0"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/uploads/${heroImagePath}`}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-b from-espresso/75 via-espresso/50 to-espresso/90"
+                aria-hidden
+              />
+            </motion.div>
+          ) : (
             <div
-              className="absolute inset-0 bg-gradient-to-b from-espresso/75 via-espresso/50 to-espresso/90"
+              className="absolute inset-0 bg-gradient-to-br from-sage/25 via-cream via-warmwhite/95 to-honey/20"
               aria-hidden
             />
-          </>
-        ) : (
-          <div
-            className="absolute inset-0 bg-gradient-to-br from-sage/25 via-cream via-warmwhite/95 to-honey/20"
-            aria-hidden
-          />
-        )}
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Content overlay */}
-      <div className={`relative z-10 px-6 sm:px-8 py-16 md:py-20 text-center max-w-4xl mx-auto ${heroImagePath ? "" : "text-espresso"}`}>
-        <motion.h1
-          className={`font-display text-4xl sm:text-5xl md:text-6xl font-bold leading-tight ${heroImagePath ? "text-white drop-shadow-lg" : "text-espresso"}`}
-          variants={container}
-          initial="hidden"
-          animate="visible"
-        >
-          {slogan.split("").map((char, i) => (
-            <motion.span key={i} variants={letter} className="inline-block">
-              {char === " " ? "\u00A0" : char}
-            </motion.span>
-          ))}
-        </motion.h1>
+      <div
+        className={`relative z-10 px-6 sm:px-8 py-16 md:py-20 text-center max-w-4xl mx-auto ${heroImagePath ? "" : "text-espresso"}`}
+      >
+        <AnimatePresence mode="wait">
+          <motion.h1
+            key={slogan}
+            className={`font-display text-4xl sm:text-5xl md:text-6xl font-bold leading-tight ${heroImagePath ? "text-white drop-shadow-lg" : "text-espresso"}`}
+            variants={container}
+            initial="hidden"
+            animate="visible"
+          >
+            {slogan.split("").map((char, i) => (
+              <motion.span key={i} variants={letter} className="inline-block">
+                {char === " " ? "\u00A0" : char}
+              </motion.span>
+            ))}
+          </motion.h1>
+        </AnimatePresence>
 
         <motion.p
           className={`mt-6 text-lg sm:text-xl font-body max-w-2xl mx-auto ${heroImagePath ? "text-white/95 drop-shadow-md" : "text-espresso-mid"}`}
@@ -88,7 +122,9 @@ export function HeroSection({ heroImagePath, backenCount = 0, kochenCount = 0 }:
             + Neues Rezept
           </Link>
           {(backenCount > 0 || kochenCount > 0) && (
-            <div className={`flex items-center gap-6 text-sm font-bold ${heroImagePath ? "text-white/90" : "text-espresso-mid"}`}>
+            <div
+              className={`flex items-center gap-6 text-sm font-bold ${heroImagePath ? "text-white/90" : "text-espresso-mid"}`}
+            >
               <span className="flex items-center gap-2">
                 <span className="text-xl">🥐</span>
                 {backenCount} Backen
