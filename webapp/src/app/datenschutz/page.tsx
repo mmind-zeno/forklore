@@ -95,6 +95,17 @@ export default function DatenschutzPage() {
           </section>
 
           <section>
+            <h2 className="font-display text-xl font-bold text-espresso mb-3">Datenspeicherung und Haftung</h2>
+            <p>
+              Wir bemühen uns um eine zuverlässige Speicherung Ihrer Rezepte und Daten. Eine Garantie für die
+              dauerhafte Verfügbarkeit oder Sicherheit können wir jedoch nicht übernehmen. Rezepte und andere
+              erfasste Inhalte können bei technischen Störungen, Serverausfällen oder aus anderen Gründen
+              verloren gehen. Wir empfehlen, wichtige Rezepte eigenverantwortlich zu sichern (z.&#8203;B. durch
+              Kopien oder Export).
+            </p>
+          </section>
+
+          <section>
             <h2 className="font-display text-xl font-bold text-espresso mb-3">Ihre Rechte</h2>
             <p>
               Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung und

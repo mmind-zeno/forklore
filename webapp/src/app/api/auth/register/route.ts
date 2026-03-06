@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const hash = await bcrypt.hash(password, 12);
-    const accountAccessUntil = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+    const aiAccessUntil = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
 
     await prisma.user.create({
       data: {
@@ -48,14 +48,14 @@ export async function POST(request: NextRequest) {
         password: hash,
         name: name?.trim() || null,
         role: "USER",
-        accountAccessUntil,
-        aiAccessUntil: null,
+        accountAccessUntil: null,
+        aiAccessUntil,
       },
     });
 
     return NextResponse.json({
       message: "Konto erstellt. Du kannst dich jetzt anmelden.",
-      accountAccessUntil: accountAccessUntil.toISOString(),
+      aiAccessUntil: aiAccessUntil.toISOString(),
     });
   } catch (error) {
     console.error("Register error:", error);

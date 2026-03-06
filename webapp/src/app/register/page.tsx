@@ -64,7 +64,7 @@ export default function RegisterPage() {
         <div className="bg-warmwhite rounded-2xl border border-espresso/6 shadow-card p-8">
           <h1 className="font-display text-2xl font-bold text-espresso mb-2">Registrieren</h1>
           <p className="text-espresso-mid text-sm mb-6">
-            Erstelle ein Konto und erhalte 10 Tage Zugang zur App (ohne KI-Funktionen). Ein Admin kann dir später KI-Zugang einrichten.
+            Erstelle ein Konto und erhalte dauerhaften Zugang zur App. Die ersten 10 Tage kannst du die KI-Funktionen nutzen. Danach kann ein Admin dir KI-Zugang einrichten.
           </p>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
